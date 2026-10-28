@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<style>
+  /* ---------- Color scheme extracted from the source image ---------- */
+  :root{
+    --bg-0:#131315;          /* deepest black */
+    --bg-1:#191a1c;          /* page bg */
+    --bg-2:#1f2022;          /* cards */
+    --bg-3:#26272a;          /* elevated panels */
+    --line:#2d2e30;          /* hairline borders */
+    --line-strong:#3c3d40;
+    --txt-0:#e8e9e2;         /* main text (slightly muted) */
+    --txt-1:#a8a9a3;         /* secondary text */
+    --txt-2:#73746e;         /* muted text */
+    --lime:#b9c94a;          /* primary accent — muted olive/lime */
+    --lime-dim:#8a9836;      /* hover/dim */
+    --lime-soft:rgba(185,201,74,.14);
+    --green:#4a8a3a;        /* success / verified — muted forest green */
+    --red:#c5482a;          /* danger / off — muted terracotta */
+    --amber:#c8952a;        /* warning — muted amber */
+    --vk:#2e6fd6;           /* VK blue (muted) */
+    --ya:#d63f1f;           /* Yandex red (muted) */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg-1);color:var(--txt-0);font-family:'Inter','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.45}
+  body{padding:0;min-height:100vh}
+
+  /* ===================== TOP BAR ===================== */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 32px;
+    background:var(--bg-0);
+    border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:10;
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand .logo{
+    width:34px;height:34px;border-radius:8px;
+    background:var(--lime);
+    display:flex;align-items:center;justify-content:center;
+    color:#0f1011;font-weight:800;font-size:18px;letter-spacing:-1px;
+    box-shadow:0 0 14px rgba(185,201,74,.22);
+  }
+  .brand .name{font-weight:700;font-size:17px;letter-spacing:-.2px}
+  .brand .name span{color:var(--lime)}
+  .brand .tag{font-size:11px;color:var(--txt-2);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px}
+
+  .topnav{display:flex;gap:6px;align-items:center}
+  .topnav a{color:var(--txt-1);text-decoration:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:500}
+  .topnav a.active{color:var(--lime);background:var(--lime-soft)}
+  .topnav a:hover{color:var(--txt-0)}
+
+  .auth{display:flex;gap:10px}
+  .btn-auth{
+    display:flex;align-items:center;gap:8px;
+    padding:9px 16px;border-radius:8px;
+    font-size:13px;font-weight:600;
+    border:1px solid transparent;cursor:pointer;
+    transition:.15s;
+  }
+  .btn-auth .dot{width:8px;height:8px;border-radius:50%}
+  .btn-vk{background:#fff;color:#2e6fd6;border-color:#fff}
+  .btn-vk .dot{background:#2e6fd6}
+  .btn-vk:hover{background:#2e6fd6;color:#fff;border-color:#2e6fd6}
+  .btn-vk:hover .dot{background:#fff}
+  .btn-ya{background:#fff;color:#d63f1f;border-color:#fff}
+  .btn-ya .dot{background:#d63f1f}
+  .btn-ya:hover{background:#d63f1f;color:#fff;border-color:#d63f1f}
+  .btn-ya:hover .dot{background:#fff}
+
+  /* ===================== HEADER STRIP ===================== */
+  .hero{
+    padding:34px 32px 18px;
+    background:linear-gradient(180deg,var(--bg-1) 0%,var(--bg-0) 100%);
+    border-bottom:1px solid var(--line);
+  }
+  .hero h1{font-size:30px;font-weight:800;letter-spacing:-.5px;line-height:1.15}
+  .hero h1 em{font-style:normal;color:var(--lime)}
+  .hero p{margin-top:8px;color:var(--txt-1);max-width:680px;font-size:14px}
+  .hero .stats{display:flex;gap:24px;margin-top:18px}
+  .hero .stat .n{font-size:22px;font-weight:800;color:var(--lime);font-variant-numeric:tabular-nums}
+  .hero .stat .l{font-size:11px;color:var(--txt-2);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+
+  /* ===================== FILTER BAR ===================== */
+  .filters{
+    margin:0 32px;margin-top:24px;
+    background:var(--bg-2);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px 20px;
+  }
+  .filters .row1{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  .filters .title{font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--txt-1)}
+  .filters .title .pill{display:inline-block;background:var(--lime);color:#0f1011;font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px;margin-left:8px;letter-spacing:0}
+  .filters .clear{font-size:12px;color:var(--txt-2);text-decoration:none;border-bottom:1px dashed var(--line-strong);padding-bottom:1px}
+  .filters .clear:hover{color:var(--lime)}
+
+  .filter-grid{
+    display:grid;
+    grid-template-columns:1.1fr 1.3fr 1fr 1.1fr 0.9fr 0.8fr;
+    gap:14px;
+  }
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--txt-2);font-weight:600}
+  .field .ctrl{
+    background:var(--bg-3);border:1px solid var(--line-strong);border-radius:8px;
+    padding:9px 11px;font-size:13px;color:var(--txt-0);
+    display:flex;align-items:center;justify-content:space-between;
+    cursor:pointer;min-height:38px;
+  }
+  .field .ctrl:hover{border-color:var(--lime-dim)}
+  .field .ctrl .arrow{color:var(--txt-2);font-size:10px}
+  .field .ctrl .val{display:flex;align-items:center;gap:6px}
+
+  /* price slider — special */
+  .price-range{position:relative}
+  .price-track{
+    height:4px;background:var(--bg-0);border-radius:2px;margin-top:14px;position:relative;
+  }
+  .price-fill{position:absolute;left:15%;right:35%;top:0;bottom:0;background:var(--lime);border-radius:2px}
+  .price-handle{position:absolute;top:50%;width:14px;height:14px;background:var(--lime);border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 3px var(--bg-2),0 0 10px rgba(185,201,74,.35)}
+  .price-vals{display:flex;justify-content:space-between;font-size:11px;color:var(--txt-1);margin-top:8px;font-variant-numeric:tabular-nums}
+  .price-vals .min{color:var(--lime)}
+
+  /* toggle for boolean */
+  .toggle{
+    background:var(--bg-3);border:1px solid var(--line-strong);border-radius:8px;
+    padding:8px 12px;display:flex;align-items:center;justify-content:space-between;min-height:38px;cursor:pointer;
+  }
+  .toggle:hover{border-color:var(--lime-dim)}
+  .toggle .switch{width:34px;height:18px;background:var(--bg-0);border-radius:99px;position:relative;border:1px solid var(--line-strong)}
+  .toggle .switch::after{content:'';position:absolute;width:12px;height:12px;background:var(--txt-2);border-radius:50%;top:2px;left:2px;transition:.15s}
+  .toggle.on .switch{background:var(--lime);border-color:var(--lime)}
+  .toggle.on .switch::after{left:18px;background:#0f1011}
+
+  /* active status filter pills */
+  .pills{display:flex;gap:6px;flex-wrap:wrap;padding-top:2px}
+  .pill-btn{
+    background:var(--bg-3);border:1px solid var(--line-strong);border-radius:99px;
+    padding:5px 10px;font-size:11.5px;color:var(--txt-1);cursor:pointer;white-space:nowrap;
+  }
+  .pill-btn.active{background:var(--lime-soft);border-color:var(--lime);color:var(--lime)}
+
+  /* ===================== LIST ===================== */
+  .list-wrap{padding:24px 32px 60px}
+  .list-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  .list-head .count{font-size:13px;color:var(--txt-1)}
+  .list-head .count strong{color:var(--lime);font-weight:700}
+  .sort{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--txt-2)}
+  .sort select{background:var(--bg-2);border:1px solid var(--line);color:var(--txt-0);padding:6px 10px;border-radius:6px;font-size:12px}
+
+  .list{
+    display:grid;grid-template-columns:1fr;gap:12px;
+  }
+  .card{
+    background:var(--bg-2);border:1px solid var(--line);border-radius:12px;
+    padding:16px 18px;display:grid;
+    grid-template-columns:48px 1fr auto auto auto auto auto;
+    gap:18px;align-items:center;
+    transition:.15s;
+  }
+  .card:hover{border-color:var(--lime-dim);background:var(--bg-3)}
+  .favicon{
+    width:42px;height:42px;border-radius:8px;
+    background:var(--bg-3);border:1px solid var(--line-strong);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:18px;color:var(--lime);
+    overflow:hidden;
+  }
+  .fav-a{background:linear-gradient(135deg,#4a8a3a,#2a4f1f);color:#fff}
+  .fav-b{background:linear-gradient(135deg,#c5482a,#7a2818);color:#fff}
+  .fav-c{background:linear-gradient(135deg,#c8952a,#7a5418);color:#131315}
+  .fav-d{background:linear-gradient(135deg,#2e6fd6,#1a3a7a);color:#fff}
+  .fav-e{background:linear-gradient(135deg,#b9c94a,#6a7824);color:#131315}
+  .fav-f{background:linear-gradient(135deg,#7d59b8,#3a1a7a);color:#fff}
+  .fav-g{background:linear-gradient(135deg,#2a9bb8,#1a5a7a);color:#fff}
+  .fav-h{background:linear-gradient(135deg,#b85f8e,#5a2848);color:#fff}
+
+  .main-info{min-width:0}
+  .main-info .title{font-size:15px;font-weight:700;color:var(--txt-0)}
+  .main-info .title .verified-badge{
+    display:inline-block;width:14px;height:14px;border-radius:50%;
+    background:var(--green);color:#0f1011;font-size:9px;
+    text-align:center;line-height:14px;margin-left:6px;vertical-align:1px;
+    font-weight:800;
+  }
+  .main-info .domain{font-size:12px;color:var(--txt-1);margin-top:3px;display:flex;align-items:center;gap:6px}
+  .main-info .domain .ico{color:var(--txt-2)}
+  .main-info .desc{font-size:11.5px;color:var(--txt-2);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:380px}
+
+  .col{display:flex;flex-direction:column;align-items:flex-start;min-width:80px}
+  .col .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--txt-2);font-weight:600}
+  .col .v{font-size:14px;font-weight:700;color:var(--txt-0);font-variant-numeric:tabular-nums;margin-top:3px}
+  .col .v.lime{color:var(--lime)}
+  .col .v.green{color:var(--green)}
+  .col .v.red{color:var(--red)}
+  .col .v small{font-size:11px;color:var(--txt-2);font-weight:500;margin-left:2px}
+
+  .status{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;
+  }
+  .status.active{background:rgba(74,138,58,.14);color:var(--green);border:1px solid rgba(74,138,58,.42)}
+  .status.paused{background:rgba(200,149,42,.14);color:var(--amber);border:1px solid rgba(200,149,42,.42)}
+  .status .dot{width:6px;height:6px;border-radius:50%}
+  .status.active .dot{background:var(--green);box-shadow:0 0 5px var(--green)}
+  .status.paused .dot{background:var(--amber)}
+
+  .verified{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--txt-1)}
+  .verified .check{
+    width:18px;height:18px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;
+  }
+  .verified.yes .check{background:var(--green);color:#0f1011}
+  .verified.no .check{background:var(--bg-3);border:1px solid var(--line-strong);color:var(--txt-2)}
+
+  .buy{
+    padding:9px 18px;border-radius:8px;
+    background:var(--lime);color:#0f1011;font-weight:700;font-size:13px;
+    border:none;cursor:pointer;letter-spacing:.2px;
+    transition:.15s;
+  }
+  .buy:hover{background:#cdd96a;box-shadow:0 0 14px rgba(185,201,74,.28)}
+
+  /* footer note */
+  .footnote{
+    text-align:center;color:var(--txt-2);font-size:11px;margin-top:40px;letter-spacing:.5px;
+  }
+  .footnote .lime{color:var(--lime)}
+
+  /* ===== small responsive guard ===== */
+  @media (max-width:1100px){
+    .filter-grid{grid-template-columns:1fr 1fr 1fr}
+    .card{grid-template-columns:42px 1fr auto auto;gap:14px}
+    .card .col.price,.card .col.income,.card .col.verified{display:none}
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============ TOP BAR ============ -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">S</div>
+      <div>
+        <div class="name">Sites-<span>shop</span></div>
+        <div class="tag">Маркетплейс готовых сайтов</div>
+      </div>
+    </div>
+    <nav class="topnav">
+      <a href="#" class="active">Каталог</a>
+      <a href="#">Как это работает</a>
+      <a href="#">Тарифы</a>
+      <a href="#">Помощь</a>
+    </nav>
+    <div class="auth">
+      <button class="btn-auth btn-vk"><span class="dot"></span>Войти через VK ID</button>
+      <button class="btn-auth btn-ya"><span class="dot"></span>Войти через Яндекс ID</button>
+    </div>
+  </div>
+
+  <!-- ============ HERO ============ -->
+  <div class="hero">
+    <h1>Покупайте и продавайте <em>готовые сайты</em><br>с проверенной доходностью</h1>
+    <p>Каталог из 1 240 действующих проектов с прозрачной аналитикой, верификацией владельцев и безопасной сделкой через эскроу.</p>
+    <div class="stats">
+      <div class="stat"><div class="n">1 240</div><div class="l">активных лотов</div></div>
+      <div class="stat"><div class="n">₽ 86 М</div><div class="l">оборот за 30 дней</div></div>
+      <div class="stat"><div class="n">98%</div><div class="l">верифицировано</div></div>
+      <div class="stat"><div class="n">14 дн.</div><div class="l">средний срок сделки</div></div>
+    </div>
+  </div>
+
+  <!-- ============ FILTER BAR ============ -->
+  <div class="filters">
+    <div class="row1">
+      <div class="title">Фильтры <span class="pill">6 активных</span></div>
+      <a class="clear" href="#">Сбросить все</a>
+    </div>
+
+    <div class="filter-grid">
+      <!-- PRICE -->
+      <div class="field">
+        <label>Цена, ₽</label>
+        <div class="ctrl price-range">
+          <div class="price-track">
+            <div class="price-fill"></div>
+            <div class="price-handle" style="left:15%"></div>
+            <div class="price-handle" style="left:65%"></div>
+          </div>
+          <div class="price-vals"><span class="min">45 000</span><span>1 200 000</span></div>
+        </div>
+      </div>
+
+      <!-- DOMAIN -->
+      <div class="field">
+        <label>Домен / зона</label>
+        <div class="ctrl">
+          <div class="val">.ru  .com  .net  .shop</div>
+          <div class="arrow">▼</div>
+        </div>
+      </div>
+
+      <!-- STATUS -->
+      <div class="field">
+        <label>Статус</label>
+        <div class="pills">
+          <div class="pill-btn active">Активен</div>
+          <div class="pill-btn">На паузе</div>
+          <div class="pill-btn">Продан</div>
+        </div>
+      </div>
+
+      <!-- ANNUAL INCOME -->
+      <div class="field">
+        <label>Годовой доход, ₽</label>
+        <div class="ctrl">
+          <div class="val">от 500 000</div>
+          <div class="arrow">▼</div>
+        </div>
+      </div>
+
+      <!-- VERIFIED -->
+      <div class="field">
+        <label>Проверен</label>
+        <div class="toggle on">
+          <span style="font-size:12px;color:var(--txt-1)">только верифиц.</span>
+          <div class="switch"></div>
+        </div>
+      </div>
+
+      <!-- APPLY -->
+      <div class="field">
+        <label>&nbsp;</label>
+        <button class="buy" style="height:38px;width:100%">Применить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ LIST ============ -->
+  <div class="list-wrap">
+    <div class="list-head">
+      <div class="count">Показано <strong>8 из 1 240</strong> лотов</div>
+      <div class="sort">
+        Сортировка:
+        <select>
+          <option>Сначала новые</option>
+          <option>Цена ↑</option>
+          <option>Цена ↓</option>
+          <option>Доход ↑</option>
+          <option>Доход ↓</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="list">
+
+      <!-- 1 -->
+      <div class="card">
+        <div class="favicon fav-a">A</div>
+        <div class="main-info">
+          <div class="title">AutoZap.ru — магазин автозапчастей <span class="verified-badge">✓</span></div>
+          <div class="domain">🌐 autozap.ru · 6 лет в работе · ИЦ 240</div>
+          <div class="desc">Маркетплейс запчастей для иномарок, 18k SKU, прямые контракты с поставщиками</div>
+        </div>
+        <div class="col"><div class="lbl">Цена</div><div class="v lime">1 180 000<small>₽</small></div></div>
+        <div class="col"><div class="lbl">Год. доход</div><div class="v green">740 000<small>₽</small></div></div>
+        <div class="col"><div class="lbl">Статус</div><div class="status active"><span class="dot"></span>Активен</div></div>
+        <div class="verified yes"><div class="check">✓</div>верифиц.</div>
+        <button class="buy">Купить</button>
+      </div>
+
+      <!-- 2 -->
+      <div class="card">
+        <div class="favicon fav-b">M</div>
+        <div class="main-info">
+          <div class="title">MedConsult.online — телемедицина <span class="verified-badge">✓</span></div>
+          <div class="domain">🌐 medconsult.online · 3 года · ИЦ 95</div>
+          <div class="desc">Платформа онлайн-консультаций, 48 врачей, приём 24/7, своя CRM</div>
+        </div>
+        <div class="col"><div class="lbl">Цена</div><div class="v lime">920 000<small>₽</small></div></div>
+        <div class="col"><div class="lbl">Год. доход</div><div class="v green">510 000<small>₽</small></div></div>
+        <div class="col"><div class="lbl">Статус</div><div class="status active"><span class="dot"></span>Активен</div></div>
+        <div class="verified yes"><div class="check">✓</div>верифиц.</div>
+        <button class="buy">Купить</button>
+      </div>
+
+      <!-- 3 -->
+      <div class="card">
+        <div class="favicon fav-c">S</div>
+        <div class="main-info">
+          <div class="title">SneakerDrop.ru — дроп-шиппинг обуви</div>
+          <div class="domain">🌐 sneakerdrop.ru · 11 мес. · ИЦ 22</div>
+          <div class="desc">Магазин лимитированных кроссовок, интеграция с 7 складами США и ЕС</div>
+        </div>
+        <div class="col"><div class="lbl">Цена</div><div class="v lime">340 000<small>₽</small></div></div>
+        <div class="col"><div class="lbl">Год. доход</div><div class="v green">180 000<small>₽</small></div></div>
+        <div class="col"><div class="lbl">Статус</div><div class="status active"><span class="dot"></span>Активен</div></div>
+        <div class="verified no"><div class="check">?</div>не проверен</div>
+        <button class="buy">Купить</button>
+      </div>
+
+      <!-- 4 -->
+      <div class="card">
+        <div class="favicon fav-d">F</div>
+        <div class="main-info">
+          <div class="title">FinForum.ru — финансовое сообщество <span class="verified-badge">✓</span></div>
+          <div class="domain">🌐 finforum.ru · 8 лет · ИЦ 410</div>
+          <div class="desc">Закрытый форум инвесторов, 84k пользователей, платная подписка 4990₽/мес</div>
+        </div>
+        <div class="col"><div class="lbl">Цена</div><div class="v lime">2 450 000<small>₽</small></div></div>
+        <div class="col"><div class="lbl">Год. доход</div><div class="v green">1 920 000<small>₽</small></div></div>
+        <div class="col"><div class="lbl">Статус</div><div class="status active"><span class="dot"></span>Активен</div></div>
+        <div class="verified yes"><div class="check">✓</div>верифиц.</div>
+        <button class="buy">Купить</button>
+      </div>
+
+      <!-- 5 -->
+      <div class="card">
+        <div class="favicon fav-e">E</div>
+        <div class="main-info">
+          <div class="title">EcoDelivery.shop — доставка эко-продуктов</div>
+          <div class="domain">🌐 ecodelivery.shop · 2 года · ИЦ 38</div>
+          <div class="desc">Сервис доставки фермерских продуктов в МСК и СПб, 1 200 SKU, 18 поставщиков</div>
+        </div>
+        <div class="col"><div class="lbl">Цена</div><div class="v lime">560 000<small>₽</small></div></div>
+        <div class="col"><div class="lbl">Год. доход</div><div class="v green">290 000<small>₽</small></div></div>
+        <div class="col"><div class="lbl">Статус</div><div class="status paused"><span class="dot"></span>На паузе</div></div>
+        <div class="verified no"><div class="check">?</div>не проверен</div>
+        <button class="buy">Купить</button>
+      </div>
+
+      <!-- 6 -->
+      <div class="card">
+        <div class="favicon fav-f">C</div>
+        <div class="main-info">
+          <div class="title">CryptoSignals.pro — Telegram-канал и бот <span class="verified-badge">✓</span></div>
+          <div class="domain">🌐 cryptosignals.pro · 4 года · ИЦ 64</div>
+          <div class="desc">Подписка на торговые сигналы, 12k платных подписчиков, средний retention 78%</div>
+        </div>
+        <div class="col"><div class="lbl">Цена</div><div class="v lime">780 000<small>₽</small></div></div>
+        <div class="col"><div class="lbl">Год. доход</div><div class="v green">960 000<small>₽</small></div></div>
+        <div class="col"><div class="lbl">Статус</div><div class="status active"><span class="dot"></span>Активен</div></div>
+        <div class="verified yes"><div class="check">✓</div>верифиц.</div>
+        <button class="buy">Купить</button>
+      </div>
+
+      <!-- 7 -->
+      <div class="card">
+        <div class="favicon fav-g">T</div>
+        <div class="main-info">
+          <div class="title">TravelNotes.ru — тревел-блог с доходом</div>
+          <div class="domain">🌐 travelnotes.ru · 5 лет · ИЦ 130</div>
+          <div class="desc">Авторский блог о путешествиях, 220k визитов/мес, монетизация через AdSense и спонсоров</div>
+        </div>
+        <div class="col"><div class="lbl">Цена</div><div class="v lime">420 000<small>₽</small></div></div>
+        <div class="col"><div class="lbl">Год. доход</div><div class="v green">240 000<small>₽</small></div></div>
+        <div class="col"><div class="lbl">Статус</div><div class="status active"><span class="dot"></span>Активен</div></div>
+        <div class="verified no"><div class="check">?</div>не проверен</div>
+        <button class="buy">Купить</button>
+      </div>
+
+      <!-- 8 -->
+      <div class="card">
+        <div class="favicon fav-h">L</div>
+        <div class="main-info">
+          <div class="title">LearnPro.online — онлайн-школа <span class="verified-badge">✓</span></div>
+          <div class="domain">🌐 learnpro.online · 3 года · ИЦ 88</div>
+          <div class="desc">47 курсов по IT и дизайну, своя LMS-платформа, 6 800 студентов, recurring 78%</div>
+        </div>
+        <div class="col"><div class="lbl">Цена</div><div class="v lime">1 540 000<small>₽</small></div></div>
+        <div class="col"><div class="lbl">Год. доход</div><div class="v green">1 240 000<small>₽</small></div></div>
+        <div class="col"><div class="lbl">Статус</div><div class="status active"><span class="dot"></span>Активен</div></div>
+        <div class="verified yes"><div class="check">✓</div>верифиц.</div>
+        <button class="buy">Купить</button>
+      </div>
+
+    </div>
+
+    <div class="footnote">Sites-<span class="lime">shop</span></div>
+  </div>
+
+</body>
+</html>
