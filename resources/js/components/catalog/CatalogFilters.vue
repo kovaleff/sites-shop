@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
 import DomainZoneField from '@/components/catalog/DomainZoneField.vue';
 import IncomeRangeField from '@/components/catalog/IncomeRangeField.vue';
@@ -19,6 +19,8 @@ const props = defineProps({
 
 const emit = defineEmits(['apply', 'reset']);
 
+const AUTO_APPLY_DELAY_MS = 250;
+
 /**
  * @param {object} filters
  * @returns {object}
@@ -31,7 +33,39 @@ function cloneFilters(filters) {
     };
 }
 
+/**
+ * @param {object} left
+ * @param {object} right
+ * @returns {boolean}
+ */
+function sameFilters(left, right) {
+    return (
+        left.priceMin === right.priceMin &&
+        left.priceMax === right.priceMax &&
+        left.incomeMin === right.incomeMin &&
+        left.incomeMax === right.incomeMax &&
+        left.verifiedOnly === right.verifiedOnly &&
+        [...left.zones].sort().join(',') === [...right.zones].sort().join(',')
+    );
+}
+
 const draft = ref(cloneFilters(props.applied));
+
+let applyTimer = null;
+
+/**
+ * @returns {void}
+ */
+function scheduleApply() {
+    if (applyTimer !== null) {
+        clearTimeout(applyTimer);
+    }
+
+    applyTimer = setTimeout(() => {
+        applyTimer = null;
+        emit('apply', cloneFilters(draft.value));
+    }, AUTO_APPLY_DELAY_MS);
+}
 
 watch(
     () => props.applied,
@@ -40,6 +74,24 @@ watch(
     },
     { deep: true },
 );
+
+watch(
+    draft,
+    () => {
+        if (sameFilters(draft.value, props.applied)) {
+            return;
+        }
+
+        scheduleApply();
+    },
+    { deep: true },
+);
+
+onBeforeUnmount(() => {
+    if (applyTimer !== null) {
+        clearTimeout(applyTimer);
+    }
+});
 
 const priceRange = computed({
     get: () => [draft.value.priceMin, draft.value.priceMax],
@@ -71,12 +123,6 @@ const verifiedOnly = computed({
     },
 });
 
-/**
- * @returns {void}
- */
-function apply() {
-    emit('apply', cloneFilters(draft.value));
-}
 </script>
 
 <template>
@@ -125,11 +171,7 @@ function apply() {
                 label="Доход, ₽/мес"
             />
 
-            <div class="flex flex-col justify-end gap-2">
-                <VerifiedField v-model="verifiedOnly" />
-
-                <Button class="h-9 w-full" @click="apply">Применить</Button>
-            </div>
+            <VerifiedField v-model="verifiedOnly" />
         </div>
     </section>
 </template>

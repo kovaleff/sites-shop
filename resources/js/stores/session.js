@@ -1,24 +1,84 @@
 import { defineStore } from 'pinia';
 
-import { fetchSession, login, logout } from '@/services/sessionService';
+import { authErrorMessage } from '@/lib/authErrors';
+import {
+    fetchSession,
+    logout as logoutRequest,
+    startVkLogin,
+    startYandexLogin,
+} from '@/services/sessionService';
+import { fetchUnreadCount } from '@/services/conversationService';
 
 export const useSessionStore = defineStore('session', {
     state: () => ({
         user: null,
         isAuthenticated: false,
+        isInitialized: false,
         isLoggingIn: false,
         authError: null,
+        unreadMessages: 0,
+        csrfToken: null,
     }),
 
     actions: {
         /**
+         * @param {{ authenticated: boolean, user: object | null }} session
+         * @returns {void}
+         */
+        applySession(session) {
+            this.user = session?.authenticated ? session.user : null;
+            this.isAuthenticated = Boolean(session?.authenticated && session.user);
+
+            if (!this.isAuthenticated) {
+                this.unreadMessages = 0;
+            }
+        },
+
+        /**
+         * Загрузить состояние сессии с сервера при старте SPA.
+         *
          * @returns {Promise<void>}
          */
         async initialize() {
-            const session = await fetchSession();
+            this.applySession(await fetchSession());
+            this.isInitialized = true;
 
-            this.user = session.user;
-            this.isAuthenticated = session.authenticated;
+            if (this.isAuthenticated) {
+                await this.refreshUnread();
+            }
+        },
+
+        /**
+         * Счётчик непрочитанных для бейджа в шапке (FR-032).
+         * Ошибка запроса не ломает страницу — остаётся прежнее значение.
+         *
+         * @returns {Promise<void>}
+         */
+        async refreshUnread() {
+            if (!this.isAuthenticated) {
+                this.unreadMessages = 0;
+
+                return;
+            }
+
+            try {
+                const data = await fetchUnreadCount();
+
+                this.unreadMessages = Number(data?.count ?? 0);
+            } catch {
+                /* noop: бейдж не критичен для работы страницы */
+            }
+        },
+
+        /**
+         * Реакция на 401: сессия считается потерянной без запроса к серверу.
+         *
+         * @returns {void}
+         */
+        handleUnauthorized() {
+            this.user = null;
+            this.isAuthenticated = false;
+            this.unreadMessages = 0;
         },
 
         /**
@@ -26,7 +86,8 @@ export const useSessionStore = defineStore('session', {
          * @returns {Promise<{ ok: boolean, error: string | null }>}
          */
         async loginWithProvider(provider) {
-            if (this.isLoggingIn) {
+            // Уже авторизован или попытка в процессе — новую не начинаем (FR-004).
+            if (this.isAuthenticated || this.isLoggingIn) {
                 return { ok: false, error: null };
             }
 
@@ -34,14 +95,15 @@ export const useSessionStore = defineStore('session', {
             this.authError = null;
 
             try {
-                const session = await login(provider);
-
-                this.user = session.user;
-                this.isAuthenticated = true;
+                if (provider === 'vk') {
+                    await startVkLogin();
+                } else {
+                    startYandexLogin();
+                }
 
                 return { ok: true, error: null };
             } catch (error) {
-                this.authError = error?.message ?? 'Не удалось выполнить вход';
+                this.authError = authErrorMessage(error?.code, error?.message);
 
                 return { ok: false, error: this.authError };
             } finally {
@@ -67,11 +129,18 @@ export const useSessionStore = defineStore('session', {
          * @returns {Promise<void>}
          */
         async logout() {
-            await logout();
+            try {
+                await logoutRequest();
+            } catch {
+                // Сессия на сервере могла уже истечь — интерфейс всё равно
+                // возвращается в состояние гостя.
+            }
 
             this.user = null;
             this.isAuthenticated = false;
             this.authError = null;
+            this.unreadMessages = 0;
+            this.csrfToken = null;
         },
     },
 });

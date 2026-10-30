@@ -89,4 +89,25 @@ class SiteFactory extends Factory
             'verified' => true,
         ]);
     }
+
+    public function hidden(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'hidden_at' => now(),
+        ]);
+    }
+
+    public function needsRenewal(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'paid_until' => today()->addDays(3),
+        ]);
+    }
+
+    public function zone(string $zone): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'domain' => fake()->unique()->domainWord().'.'.$zone,
+        ]);
+    }
 }

@@ -15,19 +15,18 @@ const switchId = useId();
 
 <template>
     <div class="flex flex-col gap-2">
-        <span class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        <Label
+            :for="switchId"
+            class="cursor-pointer text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+        >
             Проверен
-        </span>
+        </Label>
 
-        <div class="flex min-h-9 items-center gap-3 rounded-md border border-input bg-secondary/40 px-3">
-            <Switch
-                :id="switchId"
-                :model-value="modelValue"
-                @update:model-value="emit('update:modelValue', Boolean($event))"
-            />
-            <Label :for="switchId" class="cursor-pointer text-sm text-foreground">
-                Проверен
-            </Label>
-        </div>
+        <Switch
+            :id="switchId"
+            :model-value="modelValue"
+            aria-label="Проверен"
+            @update:model-value="emit('update:modelValue', Boolean($event))"
+        />
     </div>
 </template>

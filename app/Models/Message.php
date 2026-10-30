@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Database\Factories\MessageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -61,6 +63,16 @@ class Message extends Model
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sender_id');
+    }
+
+    /**
+     * Чужие непрочитанные сообщения пользователя.
+     */
+    #[Scope]
+    protected function unreadFor(Builder $query, User $user): void
+    {
+        $query->where('sender_id', '!=', $user->id)
+            ->whereNull('read_at');
     }
 
     public function isSentBy(User $user): bool

@@ -49,11 +49,16 @@ class UserPresenter extends Presenter implements Personable, Searchable
     }
 
     /**
-     * Returns the URL for the user's Gravatar image, or a default image if one is not found.
+     * Returns the URL for the user's avatar: provider photo if present,
+     * otherwise the Gravatar image or a default image if one is not found.
      */
     public function image(): ?string
     {
-        $hash = md5(strtolower(trim($this->entity->email)));
+        if (filled($this->entity->avatar)) {
+            return $this->entity->avatar;
+        }
+
+        $hash = md5(strtolower(trim((string) $this->entity->email)));
 
         $default = urlencode('https://raw.githubusercontent.com/orchidsoftware/.github/main/web/avatars/gravatar.png');
 

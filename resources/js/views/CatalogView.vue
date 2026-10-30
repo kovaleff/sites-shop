@@ -8,6 +8,7 @@ import CatalogErrorState from '@/components/catalog/CatalogErrorState.vue';
 import CatalogFilters from '@/components/catalog/CatalogFilters.vue';
 import CatalogPagination from '@/components/catalog/CatalogPagination.vue';
 import CatalogSkeletons from '@/components/catalog/CatalogSkeletons.vue';
+import ContactSellerDialog from '@/components/catalog/ContactSellerDialog.vue';
 import ListingList from '@/components/catalog/ListingList.vue';
 import { useCatalogQuery } from '@/composables/useCatalogQuery';
 import { countActiveFilters } from '@/lib/catalogFilters';
@@ -20,9 +21,13 @@ const { applied, items, total, status, error, page, lastPage } = storeToRefs(cat
 
 const zones = ref([]);
 const zonesLoading = ref(true);
+const contactListing = ref(null);
+const isContactOpen = ref(false);
 
 const zoneValues = computed(() => zones.value.map((zone) => zone.value));
-const { hydrateFromRoute, pushFilters, clearFilters } = useCatalogQuery(() => zoneValues.value);
+const { hydrateFromRoute, pushFilters, replacePage, clearFilters } = useCatalogQuery(
+    () => zoneValues.value,
+);
 
 const activeCount = computed(() => countActiveFilters(applied.value));
 const hasActiveFilters = computed(() => activeCount.value > 0);
@@ -58,7 +63,7 @@ async function loadZones() {
  */
 async function applyFilters(filters) {
     await catalog.applyFilters(filters);
-    await pushFilters(filters, 1);
+    await replacePage(1, filters);
 }
 
 /**
@@ -84,8 +89,9 @@ async function changePage(nextPage) {
 /**
  * @returns {void}
  */
-function handleContact() {
-    toast('Связь с продавцом появится в следующей версии');
+function handleContact(listing) {
+    contactListing.value = listing;
+    isContactOpen.value = true;
 }
 </script>
 
@@ -149,4 +155,6 @@ function handleContact() {
             />
         </template>
     </main>
+
+    <ContactSellerDialog v-model:open="isContactOpen" :listing="contactListing" />
 </template>

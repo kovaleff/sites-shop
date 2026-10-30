@@ -5,6 +5,8 @@ namespace App\Models;
 use Database\Factories\ConversationFactory;
 use DomainException;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -98,6 +100,18 @@ class Conversation extends Model
     public function isParticipant(User $user): bool
     {
         return $user->id === $this->buyer_id || $user->id === $this->seller_id;
+    }
+
+    /**
+     * Диалоги, в которых пользователь — покупатель или продавец.
+     */
+    #[Scope]
+    protected function forParticipant(Builder $query, User $user): void
+    {
+        $query->where(function (Builder $query) use ($user): void {
+            $query->where('buyer_id', $user->id)
+                ->orWhere('seller_id', $user->id);
+        });
     }
 
     public function isReadOnly(): bool

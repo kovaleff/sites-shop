@@ -35,4 +35,17 @@ return [
         ],
     ],
 
+    'vk' => [
+        'client_id' => env('VK_CLIENT_ID'),
+        'client_secret' => env('VK_CLIENT_SECRET'),
+        'redirect_uri' => env('VK_REDIRECT_URI', '/api/vk/callback'),
+    ],
+
+    'yandex' => [
+        'client_id' => env('YA_CLIENT_ID'),
+        'client_secret' => env('YA_CLIENT_SECRET'),
+        'redirect' => env('YA_REDIRECT_URI', '/api/ya/callback'),
+        'allowed_redirects' => env('YA_ALLOWED_REDIRECTS'),
+    ],
+
 ];

@@ -13,6 +13,8 @@
 /.vscode
 /.zed
 /auth.json
+/localhost.pem
+/localhost-key.pem
 /node_modules
 /public/build
 /public/fonts-manifest.dev.json

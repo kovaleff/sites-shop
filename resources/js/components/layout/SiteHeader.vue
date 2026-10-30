@@ -1,8 +1,7 @@
 <script setup>
 import { computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { Menu } from '@lucide/vue';
-import { toast } from 'vue-sonner';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -25,6 +24,7 @@ import {
 import { useSessionStore } from '@/stores/session';
 
 const route = useRoute();
+const router = useRouter();
 const session = useSessionStore();
 
 const menuItems = [
@@ -44,6 +44,16 @@ const initials = computed(() => {
         .slice(0, 2)
         .map((part) => part.charAt(0).toUpperCase())
         .join('');
+});
+
+const unreadLabel = computed(() => {
+    const count = session.unreadMessages ?? 0;
+
+    if (count <= 0) {
+        return null;
+    }
+
+    return count > 99 ? '99+' : String(count);
 });
 
 /**
@@ -80,8 +90,8 @@ async function loginWith(provider) {
 /**
  * @returns {void}
  */
-function openProfile() {
-    toast('Личный кабинет появится в следующей версии');
+function openCabinet() {
+    router.push({ name: 'cabinet-sites' });
 }
 
 /**
@@ -187,8 +197,8 @@ async function logout() {
                     <DropdownMenuTrigger as-child>
                         <button
                             type="button"
-                            class="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                            aria-label="Меню профиля"
+                            class="relative rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                            :aria-label="unreadLabel ? `Меню профиля, непрочитанных сообщений: ${unreadLabel}` : 'Меню профиля'"
                         >
                             <Avatar class="size-9 border border-border">
                                 <AvatarImage v-if="user?.avatarUrl" :src="user.avatarUrl" :alt="user.displayName" />
@@ -196,13 +206,21 @@ async function logout() {
                                     {{ initials }}
                                 </AvatarFallback>
                             </Avatar>
+
+                            <span
+                                v-if="unreadLabel"
+                                class="absolute -top-1 -right-1 inline-flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] leading-4 font-bold text-white"
+                                aria-hidden="true"
+                            >
+                                {{ unreadLabel }}
+                            </span>
                         </button>
                     </DropdownMenuTrigger>
 
                     <DropdownMenuContent align="end" class="w-52">
                         <DropdownMenuLabel>{{ user?.displayName }}</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem @select="openProfile">Профиль</DropdownMenuItem>
+                        <DropdownMenuItem @select="openCabinet">Личный кабинет</DropdownMenuItem>
                         <DropdownMenuItem variant="destructive" @select="logout">Выйти</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>

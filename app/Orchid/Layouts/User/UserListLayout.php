@@ -27,6 +27,10 @@ class UserListLayout extends Table
     public function columns(): array
     {
         return [
+            TD::make('id', 'ID')
+                ->sort()
+                ->width('80px'),
+
             TD::make('name', __('Name'))
                 ->sort()
                 ->cantHide()
@@ -45,6 +49,16 @@ class UserListLayout extends Table
                         'user' => $user->id,
                     ])),
 
+            TD::make('vk_id', 'VK ID')
+                ->sort()
+                ->filter(Input::make())
+                ->render(fn (User $user) => $user->vk_id ?? '—'),
+
+            TD::make('ya_id', 'Яндекс ID')
+                ->sort()
+                ->filter(Input::make())
+                ->render(fn (User $user) => $user->ya_id ?? '—'),
+
             TD::make('sites_count', 'Объявлений')
                 ->alignRight()
                 ->render(fn (User $user) => $user->sites_count),
@@ -56,6 +70,18 @@ class UserListLayout extends Table
             TD::make('subscription_payments_count', 'Платежей')
                 ->alignRight()
                 ->render(fn (User $user) => $user->subscription_payments_count),
+
+            TD::make('vk_last_login_at', 'Вход через VK')
+                ->usingComponent(DateTimeSplit::class)
+                ->align(TD::ALIGN_RIGHT)
+                ->defaultHidden()
+                ->sort(),
+
+            TD::make('ya_last_login_at', 'Вход через Яндекс')
+                ->usingComponent(DateTimeSplit::class)
+                ->align(TD::ALIGN_RIGHT)
+                ->defaultHidden()
+                ->sort(),
 
             TD::make('created_at', __('Created'))
                 ->usingComponent(DateTimeSplit::class)

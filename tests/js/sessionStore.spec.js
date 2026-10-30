@@ -1,71 +1,100 @@
 import { createPinia, setActivePinia } from 'pinia';
 
-import { MOCK_SCENARIO_KEY, SESSION_STORAGE_KEY } from '@/mocks/session';
-import { createDefaultFilters } from '@/lib/catalogFilters';
-import { useCatalogStore } from '@/stores/catalog';
 import { useSessionStore } from '@/stores/session';
+import {
+    fetchSession,
+    logout as logoutRequest,
+    startVkLogin,
+    startYandexLogin,
+} from '@/services/sessionService';
+
+vi.mock('@/services/sessionService', () => ({
+    fetchSession: vi.fn(),
+    logout: vi.fn(),
+    startVkLogin: vi.fn(),
+    startYandexLogin: vi.fn(),
+}));
+
+const authenticatedSession = {
+    authenticated: true,
+    user: {
+        id: 42,
+        displayName: 'Иван Петров',
+        email: 'ivan@example.com',
+        avatarUrl: 'https://sun9.example/photo.jpg',
+        provider: 'vk',
+    },
+};
 
 describe('session store', () => {
     beforeEach(() => {
         setActivePinia(createPinia());
-        window.localStorage.clear();
+        vi.clearAllMocks();
     });
 
-    afterEach(() => {
-        vi.useRealTimers();
-        window.localStorage.clear();
-    });
+    it('загружает авторизованную сессию с сервера', async () => {
+        fetchSession.mockResolvedValue(authenticatedSession);
 
-    it('удаляет повреждённую сессию и возвращает гостя', async () => {
-        window.localStorage.setItem(SESSION_STORAGE_KEY, '{broken json');
         const store = useSessionStore();
+        await store.initialize();
 
+        expect(fetchSession).toHaveBeenCalledTimes(1);
+        expect(store.isAuthenticated).toBe(true);
+        expect(store.user.displayName).toBe('Иван Петров');
+    });
+
+    it('остаётся гостем при пустой сессии', async () => {
+        fetchSession.mockResolvedValue({ authenticated: false, user: null });
+
+        const store = useSessionStore();
         await store.initialize();
 
         expect(store.isAuthenticated).toBe(false);
         expect(store.user).toBeNull();
-        expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
     });
 
-    it('восстанавливает валидную сессию из localStorage', async () => {
-        window.localStorage.setItem(
-            SESSION_STORAGE_KEY,
-            JSON.stringify({
-                id: 'usr_demo',
-                displayName: 'Демо Покупатель',
-                avatarUrl: null,
-                provider: 'vk',
-            }),
+    it('запускает вход через VK', async () => {
+        startVkLogin.mockResolvedValue();
+
+        const store = useSessionStore();
+        const result = await store.loginWithVk();
+
+        expect(startVkLogin).toHaveBeenCalledTimes(1);
+        expect(result).toEqual({ ok: true, error: null });
+    });
+
+    it('запускает редирект на серверный вход Яндекса', async () => {
+        startYandexLogin.mockReturnValue();
+
+        const store = useSessionStore();
+        const result = await store.loginWithYandex();
+
+        expect(startYandexLogin).toHaveBeenCalledTimes(1);
+        expect(result).toEqual({ ok: true, error: null });
+    });
+
+    it('показывает сообщение о ненастроенном VK', async () => {
+        startVkLogin.mockRejectedValue(
+            Object.assign(new Error('technical detail'), { code: 'vk_not_configured' }),
         );
 
         const store = useSessionStore();
-        await store.initialize();
-
-        expect(store.isAuthenticated).toBe(true);
-        expect(store.user.displayName).toBe('Демо Покупатель');
-    });
-
-    it('выставляет authError и не затрагивает каталог при auth-error', async () => {
-        window.localStorage.setItem(MOCK_SCENARIO_KEY, 'auth-error');
-
-        const catalog = useCatalogStore();
-        catalog.applied = { ...createDefaultFilters(), zones: ['ru'], verifiedOnly: true };
-        catalog.draft = { ...createDefaultFilters(), zones: ['ru'], verifiedOnly: true };
-        catalog.page = 2;
-
-        const store = useSessionStore();
-
-        vi.useFakeTimers();
-        const request = store.loginWithVk();
-        await vi.advanceTimersByTimeAsync(700);
-        const result = await request;
+        const result = await store.loginWithVk();
 
         expect(result.ok).toBe(false);
+        expect(store.authError).toBe('Вход через VK ID пока не настроен');
         expect(store.isAuthenticated).toBe(false);
-        expect(store.authError).toBe('Не удалось войти через VK ID. Попробуйте ещё раз.');
-        expect(catalog.applied.zones).toEqual(['ru']);
-        expect(catalog.applied.verifiedOnly).toBe(true);
-        expect(catalog.page).toBe(2);
+    });
+
+    it('не начинает вход, если пользователь уже авторизован', async () => {
+        const store = useSessionStore();
+        store.user = authenticatedSession.user;
+        store.isAuthenticated = true;
+
+        const result = await store.loginWithVk();
+
+        expect(result).toEqual({ ok: false, error: null });
+        expect(startVkLogin).not.toHaveBeenCalled();
     });
 
     it('игнорирует повторный вход во время выполнения', async () => {
@@ -76,18 +105,33 @@ describe('session store', () => {
 
         expect(result).toEqual({ ok: false, error: null });
         expect(store.authError).toBeNull();
+        expect(startVkLogin).not.toHaveBeenCalled();
     });
 
-    it('очищает пользователя и localStorage при выходе', async () => {
+    it('очищает состояние при выходе', async () => {
+        logoutRequest.mockResolvedValue();
+
         const store = useSessionStore();
-        store.user = { id: 'usr_demo', displayName: 'Демо Покупатель' };
+        store.user = authenticatedSession.user;
         store.isAuthenticated = true;
-        window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(store.user));
+
+        await store.logout();
+
+        expect(logoutRequest).toHaveBeenCalledTimes(1);
+        expect(store.user).toBeNull();
+        expect(store.isAuthenticated).toBe(false);
+    });
+
+    it('возвращает гостя, даже если запрос выхода не удался', async () => {
+        logoutRequest.mockRejectedValue(new Error('network down'));
+
+        const store = useSessionStore();
+        store.user = authenticatedSession.user;
+        store.isAuthenticated = true;
 
         await store.logout();
 
         expect(store.user).toBeNull();
         expect(store.isAuthenticated).toBe(false);
-        expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
     });
 });

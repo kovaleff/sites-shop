@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { nextTick } from 'vue';
@@ -18,6 +18,7 @@ const ROUTES = [
     { path: '/', name: 'catalog', component: { template: '<div />' }, meta: { navKey: 'catalog' } },
     { path: '/how-it-works', name: 'how-it-works', component: { template: '<div />' }, meta: { navKey: 'how-it-works' } },
     { path: '/pricing', name: 'pricing', component: { template: '<div />' }, meta: { navKey: 'pricing' } },
+    { path: '/cabinet/sites', name: 'cabinet-sites', component: { template: '<div />' } },
 ];
 
 /**
@@ -119,24 +120,47 @@ describe('SiteHeader', () => {
         expect(wrapper.find('[aria-label="Войти через VK ID"]').exists()).toBe(false);
     });
 
-    it('открывает меню профиля и показывает сообщение без перехода', async () => {
+    it('открывает меню профиля и ведёт в личный кабинет', async () => {
         const { wrapper, router } = await mountHeader({ authenticated: true });
-        const pathBefore = router.currentRoute.value.fullPath;
 
         await wrapper.find('[aria-label="Меню профиля"]').trigger('pointerdown');
         await wrapper.find('[aria-label="Меню профиля"]').trigger('click');
         await nextTick();
 
         const item = [...document.body.querySelectorAll('[role="menuitem"]')].find((element) =>
-            element.textContent.includes('Профиль'),
+            element.textContent.includes('Личный кабинет'),
         );
 
         expect(item).toBeTruthy();
 
         item.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await flushPromises();
         await nextTick();
 
-        expect(toast).toHaveBeenCalled();
-        expect(router.currentRoute.value.fullPath).toBe(pathBefore);
+        expect(router.currentRoute.value.fullPath).toBe('/cabinet/sites');
+    });
+
+    it('показывает число непрочитанных на аватаре и скрывает при нуле', async () => {
+        const { wrapper, session } = await mountHeader({ authenticated: true });
+
+        session.unreadMessages = 3;
+        await nextTick();
+
+        expect(wrapper.text()).toContain('3');
+        expect(wrapper.find('[aria-label*="непрочитанных"]').exists()).toBe(true);
+
+        session.unreadMessages = 0;
+        await nextTick();
+
+        expect(wrapper.find('[aria-label*="непрочитанных"]').exists()).toBe(false);
+    });
+
+    it('ограничивает бейдж значением 99+', async () => {
+        const { wrapper, session } = await mountHeader({ authenticated: true });
+
+        session.unreadMessages = 150;
+        await nextTick();
+
+        expect(wrapper.text()).toContain('99+');
     });
 });

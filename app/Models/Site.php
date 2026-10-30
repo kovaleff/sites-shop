@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Str;
 use Orchid\Filters\Filterable;
 use Orchid\Filters\Types\Like;
@@ -74,6 +75,10 @@ class Site extends Model
         static::creating(function (Site $site): void {
             $site->verification_filename ??= Str::lower(Str::random(32)).'.txt';
         });
+
+        static::saving(function (Site $site): void {
+            $site->domain_zone = $site->zoneFromDomain($site->domain);
+        });
     }
 
     /**
@@ -91,6 +96,7 @@ class Site extends Model
             'verified' => 'boolean',
             'paid_until' => 'date',
             'sold_at' => 'datetime',
+            'hidden_at' => 'datetime',
         ];
     }
 
@@ -101,16 +107,24 @@ class Site extends Model
     {
         return Attribute::make(
             set: function (?string $value): ?string {
-                if ($value === null) {
-                    return null;
-                }
-
-                $domain = Str::lower(trim($value));
-                $domain = preg_replace('/^www\./', '', $domain) ?? $domain;
-
-                return rtrim($domain, '/');
+                return self::normalizeDomain($value);
             },
         );
+    }
+
+    /**
+     * Приведение домена к сравнимому виду: нижний регистр, без www. и слэша.
+     */
+    public static function normalizeDomain(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $domain = Str::lower(trim($value));
+        $domain = preg_replace('/^www\./', '', $domain) ?? $domain;
+
+        return rtrim($domain, '/');
     }
 
     public function owner(): BelongsTo
@@ -126,6 +140,14 @@ class Site extends Model
     public function conversations(): HasMany
     {
         return $this->hasMany(Conversation::class);
+    }
+
+    /**
+     * Все сообщения по объявлению (через диалоги) — для счётчика непрочитанных.
+     */
+    public function messages(): HasManyThrough
+    {
+        return $this->hasManyThrough(Message::class, Conversation::class);
     }
 
     public function subscriptionPayments(): HasMany
@@ -194,6 +216,18 @@ class Site extends Model
         $query->latest('created_at')->latest('id');
     }
 
+    #[Scope]
+    protected function visibleInCabinet(Builder $query): void
+    {
+        $query->whereNull('hidden_at');
+    }
+
+    #[Scope]
+    protected function hiddenFromCabinet(Builder $query): void
+    {
+        $query->whereNotNull('hidden_at');
+    }
+
     public function isPubliclyVisible(): bool
     {
         return $this->status === ListingStatus::Active
@@ -204,6 +238,45 @@ class Site extends Model
     public function isOwnedBy(User $user): bool
     {
         return $this->user_id === $user->id;
+    }
+
+    /**
+     * Пометка «требует продления»: подписка истекает в течение 7 дней или уже истекла.
+     */
+    public function needsRenewal(): bool
+    {
+        return $this->paid_until === null
+            || $this->paid_until->lessThanOrEqualTo(today()->addDays(7));
+    }
+
+    /**
+     * Скрыть проданное объявление из списка кабинета (данные сохраняются).
+     */
+    public function hideFromCabinet(): void
+    {
+        if ($this->status !== ListingStatus::Sold) {
+            throw new DomainException('Only sold sites can be hidden from the cabinet.');
+        }
+
+        if ($this->hidden_at !== null) {
+            return;
+        }
+
+        $this->hidden_at = now();
+        $this->save();
+    }
+
+    /**
+     * Вернуть скрытое объявление в список кабинета.
+     */
+    public function restoreFromCabinet(): void
+    {
+        if ($this->hidden_at === null) {
+            return;
+        }
+
+        $this->hidden_at = null;
+        $this->save();
     }
 
     public function acceptsPayments(): bool
@@ -254,5 +327,25 @@ class Site extends Model
 
         $this->paid_until = CarbonImmutable::parse($base)->addMonthsNoOverflow($months);
         $this->save();
+    }
+
+    /**
+     * Доменная зона (последняя метка домена), используется фильтром каталога.
+     */
+    private function zoneFromDomain(?string $domain): ?string
+    {
+        if ($domain === null) {
+            return null;
+        }
+
+        $domain = Str::lower(trim($domain));
+
+        if (! str_contains($domain, '.')) {
+            return null;
+        }
+
+        $zone = Str::afterLast($domain, '.');
+
+        return $zone === '' ? null : $zone;
     }
 }

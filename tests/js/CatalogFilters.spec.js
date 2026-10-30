@@ -57,25 +57,53 @@ describe('CatalogFilters', () => {
         expect(wrapper.text()).toContain('3 активных');
     });
 
-    it('не эмитит apply при изменении черновика', async () => {
+    it('не показывает кнопку «Применить»', () => {
         const wrapper = mountFilters();
 
-        await wrapper.find('[role="switch"]').trigger('click');
-
-        expect(wrapper.emitted('apply')).toBeUndefined();
+        expect(findButton(wrapper, 'Применить')).toBeUndefined();
     });
 
-    it('эмитит текущий черновик по кнопке «Применить»', async () => {
-        const wrapper = mountFilters();
+    it('эмитит apply после изменения фильтра без отдельной кнопки', async () => {
+        vi.useFakeTimers();
 
-        await wrapper.find('[role="switch"]').trigger('click');
-        await findButton(wrapper, 'Применить').trigger('click');
+        try {
+            const wrapper = mountFilters();
 
-        const payload = wrapper.emitted('apply').at(-1)[0];
+            await wrapper.find('[role="switch"]').trigger('click');
+            await vi.advanceTimersByTimeAsync(300);
 
-        expect(payload.verifiedOnly).toBe(true);
-        expect(payload.priceMin).toBe(0);
-        expect(payload.priceMax).toBe(10_000_000);
+            const payload = wrapper.emitted('apply').at(-1)[0];
+
+            expect(payload.verifiedOnly).toBe(true);
+            expect(payload.priceMin).toBe(0);
+            expect(payload.priceMax).toBe(10_000_000);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('объединяет быстрые изменения в один запрос', async () => {
+        vi.useFakeTimers();
+
+        try {
+            const wrapper = mountFilters();
+            const zoneButton = wrapper
+                .findAll('[data-slot="toggle-group-item"]')
+                .find((button) => button.text() === '.ru');
+
+            await wrapper.find('[role="switch"]').trigger('click');
+            await vi.advanceTimersByTimeAsync(100);
+            await zoneButton.trigger('click');
+            await vi.advanceTimersByTimeAsync(300);
+
+            const payloads = wrapper.emitted('apply');
+
+            expect(payloads).toHaveLength(1);
+            expect(payloads[0][0].verifiedOnly).toBe(true);
+            expect(payloads[0][0].zones).toEqual(['ru']);
+        } finally {
+            vi.useRealTimers();
+        }
     });
 
     it('эмитит reset и блокирует сброс при отсутствии активных фильтров', async () => {
@@ -90,23 +118,33 @@ describe('CatalogFilters', () => {
         expect(wrapper.emitted('reset')).toHaveLength(1);
     });
 
-    it('перезаписывает черновик при изменении applied', async () => {
-        const wrapper = mountFilters();
+    it('перезаписывает черновик при изменении applied без повторного apply', async () => {
+        vi.useFakeTimers();
 
-        await wrapper.find('[role="switch"]').trigger('click');
-        await wrapper.setProps({
-            applied: {
-                ...createDefaultFilters(),
-                priceMin: 500_000,
-                verifiedOnly: false,
-            },
-        });
-        await findButton(wrapper, 'Применить').trigger('click');
+        try {
+            const wrapper = mountFilters();
 
-        const payload = wrapper.emitted('apply').at(-1)[0];
+            await wrapper.setProps({
+                applied: {
+                    ...createDefaultFilters(),
+                    priceMin: 500_000,
+                    verifiedOnly: false,
+                },
+            });
+            await vi.advanceTimersByTimeAsync(300);
 
-        expect(payload.priceMin).toBe(500_000);
-        expect(payload.verifiedOnly).toBe(false);
+            expect(wrapper.emitted('apply')).toBeUndefined();
+
+            await wrapper.find('[role="switch"]').trigger('click');
+            await vi.advanceTimersByTimeAsync(300);
+
+            const payload = wrapper.emitted('apply').at(-1)[0];
+
+            expect(payload.priceMin).toBe(500_000);
+            expect(payload.verifiedOnly).toBe(true);
+        } finally {
+            vi.useRealTimers();
+        }
     });
 
     it('связывает подпись «Проверен» с переключателем', () => {

@@ -1,0 +1,377 @@
+openapi: 3.1.0
+info:
+  title: Sites-shop Social Auth API
+  version: 1.0.0
+  description: |
+    Контракт входа через VK ID и Yandex ID, а также сессионных маршрутов SPA.
+    Все маршруты зарегистрированы в web-группе Laravel и используют cookie-сессию.
+
+    Маршруты `/api/vk/callback`, `/api/ya/redirect` и `/api/ya/callback`
+    ограничены `throttle:10,1` (10 запросов в минуту с одного адреса).
+
+    Ответы OAuth-маршрутов зависят от типа запроса:
+    - браузерная навигация → `302` на `/` или `/?auth_error=<code>`;
+    - запрос с `Accept: application/json` → JSON с кодом `200`/`400`/`429`/`500`.
+servers:
+  - url: https://sites-shop.ru
+  - url: https://localhost
+paths:
+  /api/ya/redirect:
+    get:
+      summary: Запуск входа через Yandex ID
+      description: |
+        Проверяет конфигурацию и белый список адресов возврата, сохраняет
+        время начала попытки в сессии и перенаправляет в Яндекс.
+      operationId: yandexRedirect
+      responses:
+        '302':
+          description: |
+            Перенаправление на страницу согласия Яндекса либо на
+            `/?auth_error=not_configured`, если приложение не настроено или
+            домен не входит в `YA_ALLOWED_REDIRECTS`.
+          headers:
+            Location:
+              schema:
+                type: string
+              examples:
+                provider:
+                  value: https://oauth.yandex.ru/authorize?client_id=...
+                notConfigured:
+                  value: /?auth_error=not_configured
+        '429':
+          $ref: '#/components/responses/TooManyRequestsNavigation'
+  /api/ya/callback:
+    get:
+      summary: Возврат из Yandex ID
+      description: |
+        Проверяет срок попытки и `state`, обрабатывает отказ пользователя,
+        обменивает код, выполняет вход и регенерирует сессию.
+      operationId: yandexCallback
+      parameters:
+        - name: code
+          in: query
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+        - name: error
+          in: query
+          description: Код ошибки провайдера, например `access_denied`.
+          schema:
+            type: string
+      responses:
+        '302':
+          description: |
+            Успех → `/`. Ошибка → `/?auth_error=<code>`.
+            Коды: `cancelled`, `state`, `failed`, `not_configured`.
+          headers:
+            Location:
+              schema:
+                type: string
+              examples:
+                success:
+                  value: /
+                cancelled:
+                  value: /?auth_error=cancelled
+                state:
+                  value: /?auth_error=state
+                failed:
+                  value: /?auth_error=failed
+        '429':
+          $ref: '#/components/responses/TooManyRequestsNavigation'
+  /api/vk/callback:
+    get:
+      summary: Возврат из VK ID (навигация)
+      description: |
+        Маршрут принимает любой HTTP-метод (ANY). VK может вернуть код как
+        GET-редиректом, так и POST-формой. Для маршрута отключена CSRF-проверка.
+      operationId: vkCallbackGet
+      parameters:
+        - $ref: '#/components/parameters/VkCode'
+        - $ref: '#/components/parameters/VkState'
+        - $ref: '#/components/parameters/VkDeviceId'
+        - $ref: '#/components/parameters/VkError'
+        - $ref: '#/components/parameters/VkErrorDescription'
+      responses:
+        '200':
+          description: Пользователь авторизован; ответ содержит данные сессии.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionState'
+        '302':
+          description: Успешный вход при браузерной навигации → `/`.
+          headers:
+            Location:
+              schema:
+                type: string
+              examples:
+                success:
+                  value: /
+        '400':
+          $ref: '#/components/responses/VkBadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsNavigation'
+        '500':
+          $ref: '#/components/responses/VkServerError'
+    post:
+      summary: Возврат из VK ID (форма или fetch)
+      description: |
+        Для навигации VK отправляет код формой с чужого домена. SPA вызывает
+        этот же маршрут через fetch с JSON-телом и `Accept: application/json`,
+        чтобы `code_verifier` не попадал в URL.
+      operationId: vkCallbackPost
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                device_id:
+                  type: string
+                code_verifier:
+                  type: string
+                  description: PKCE-verifier; при отсутствии берётся из cookie `vk_code_verifier`.
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                state:
+                  type: string
+                device_id:
+                  type: string
+      parameters:
+        - $ref: '#/components/parameters/VkCode'
+        - $ref: '#/components/parameters/VkState'
+        - $ref: '#/components/parameters/VkDeviceId'
+        - $ref: '#/components/parameters/VkError'
+        - $ref: '#/components/parameters/VkErrorDescription'
+      responses:
+        '200':
+          description: Пользователь авторизован; ответ содержит данные сессии.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionState'
+        '302':
+          description: Успешный вход при браузерной навигации → `/`.
+          headers:
+            Location:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/VkBadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsNavigation'
+        '500':
+          $ref: '#/components/responses/VkServerError'
+  /api/v1/user:
+    get:
+      summary: Текущее состояние сессии
+      description: |
+        Возвращает гостя или авторизованного пользователя. Всегда `200`,
+        чтобы SPA мог инициализироваться без обработки ожидаемой ошибки.
+      operationId: currentSession
+      responses:
+        '200':
+          description: Состояние сессии.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionState'
+              examples:
+                guest:
+                  value:
+                    authenticated: false
+                    user: null
+                authenticated:
+                  value:
+                    authenticated: true
+                    user:
+                      id: 42
+                      displayName: Иван Петров
+                      email: ivan@example.com
+                      avatarUrl: https://example.com/avatar.jpg
+                      provider: vk
+        '429':
+          $ref: '#/components/responses/TooManyRequestsJson'
+  /api/v1/auth/logout:
+    post:
+      summary: Выход из аккаунта
+      description: |
+        Завершает сессию, инвалидирует её и регенерирует CSRF-токен.
+        Требует заголовок `X-CSRF-TOKEN` (или поле `_token`).
+      operationId: logout
+      security:
+        - csrfToken: []
+      responses:
+        '200':
+          description: Сессия завершена; возвращён новый CSRF-токен.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [authenticated, csrfToken]
+                properties:
+                  authenticated:
+                    type: boolean
+                    const: false
+                  csrfToken:
+                    type: string
+                    description: Новый CSRF-токен для последующих запросов.
+        '419':
+          $ref: '#/components/responses/CsrfTokenMismatch'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsJson'
+components:
+  securitySchemes:
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-TOKEN
+      description: Значение из `<meta name="csrf-token">`.
+  parameters:
+    VkCode:
+      name: code
+      in: query
+      schema:
+        type: string
+    VkState:
+      name: state
+      in: query
+      schema:
+        type: string
+    VkDeviceId:
+      name: device_id
+      in: query
+      schema:
+        type: string
+    VkError:
+      name: error
+      in: query
+      description: Код ошибки VK, например `access_denied`.
+      schema:
+        type: string
+    VkErrorDescription:
+      name: error_description
+      in: query
+      schema:
+        type: string
+  schemas:
+    SessionUser:
+      type: object
+      required: [id, displayName, email, avatarUrl, provider]
+      properties:
+        id:
+          type: integer
+          format: int64
+        displayName:
+          type: string
+        email:
+          type: [string, 'null']
+          format: email
+          description: Реальный или технический адрес.
+        avatarUrl:
+          type: [string, 'null']
+          format: uri
+        provider:
+          type: [string, 'null']
+          enum: [vk, yandex, null]
+          description: Провайдер последнего входа.
+    SessionState:
+      type: object
+      required: [authenticated, user]
+      properties:
+        authenticated:
+          type: boolean
+        user:
+          oneOf:
+            - $ref: '#/components/schemas/SessionUser'
+            - type: 'null'
+    AuthError:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          enum:
+            - too_many_requests
+            - not_configured
+            - vk_not_configured
+            - cancelled
+            - vk_cancelled
+            - state
+            - failed
+            - vk_failed
+        message:
+          type: string
+          description: Русское сообщение без технических деталей.
+  responses:
+    VkBadRequest:
+      description: |
+        Код отсутствует, отклонён или обмен не удался. При навигации вместо
+        JSON выполняется редирект на `/?auth_error=vk_failed`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthError'
+          examples:
+            cancelled:
+              value:
+                error: vk_cancelled
+                message: Вход через VK ID отменён
+            failed:
+              value:
+                error: vk_failed
+                message: Не удалось войти через VK ID. Попробуйте ещё раз
+    VkServerError:
+      description: |
+        Внутренняя ошибка обмена. При навигации выполняется редирект на
+        `/?auth_error=vk_failed`; технические детали не раскрываются.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthError'
+    TooManyRequestsJson:
+      description: Превышен лимит 10 запросов в минуту; сессия не изменена.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthError'
+          examples:
+            limited:
+              value:
+                error: too_many_requests
+                message: Слишком много попыток входа. Попробуйте позже
+    TooManyRequestsNavigation:
+      description: |
+        Превышен лимит 10 запросов в минуту. При браузерной навигации —
+        редирект на `/?auth_error=too_many_requests`; сессия не изменена.
+        При `Accept: application/json` — `429` с `AuthError`.
+      headers:
+        Location:
+          schema:
+            type: string
+          example: /?auth_error=too_many_requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthError'
+    CsrfTokenMismatch:
+      description: CSRF-токен отсутствует или не совпадает.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: CSRF token mismatch.
