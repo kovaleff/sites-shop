@@ -1,0 +1,27 @@
+<script setup>
+import { reactiveOmit } from "@vueuse/core";
+import { cn } from "@/lib/utils";
+import { AlertDialogTitle } from "reka-ui";
+
+const props = defineProps({
+  asChild: { type: Boolean, required: false },
+  as: { type: null, required: false },
+  class: {
+    type: [Boolean, null, String, Object, Array],
+    required: false,
+    skipCheck: true,
+  },
+});
+
+const delegatedProps = reactiveOmit(props, "class");
+</script>
+
+<template>
+  <AlertDialogTitle
+    data-slot="alert-dialog-title"
+    :class="cn('text-lg leading-none font-semibold', props.class)"
+    v-bind="delegatedProps"
+  >
+    <slot />
+  </AlertDialogTitle>
+</template>
