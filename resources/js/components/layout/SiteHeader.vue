@@ -33,6 +33,12 @@ const menuItems = [
     { key: 'pricing', label: 'Тарифы' },
 ];
 
+/**
+ * Логотип лежит в public/, поэтому путь указывается как есть:
+ * привязка к атрибуту не даёт Vite пытаться импортировать файл как модуль.
+ */
+const logoUrl = '/images/logo/sites-shop_logo_128.png';
+
 const isAuthenticated = computed(() => session.isAuthenticated);
 const user = computed(() => session.user);
 
@@ -134,9 +140,13 @@ async function logout() {
                 </Sheet>
 
                 <RouterLink :to="{ name: 'catalog', query: route.meta.navKey ? route.query : undefined }" class="flex min-w-0 items-center gap-2.5">
-                    <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-lg font-extrabold text-primary-foreground shadow-[0_0_14px_rgba(185,201,74,0.22)]">
-                        S
-                    </span>
+                    <img
+                        :src="logoUrl"
+                        alt="Логотип Sites-shop"
+                        width="36"
+                        height="36"
+                        class="size-9 shrink-0 object-contain"
+                    />
                     <span class="min-w-0">
                         <span class="block truncate text-[17px] leading-tight font-bold tracking-tight">
                             Sites-<span class="text-primary">shop</span>

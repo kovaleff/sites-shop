@@ -66,6 +66,7 @@ describe('catalogService.fetchListings', () => {
             incomeMin: 100,
             incomeMax: 900,
             zones: ['.RU', 'com'],
+            categories: ['Kompyutery-i-IT', 'avto-moto'],
             verifiedOnly: true,
         });
 
@@ -75,7 +76,18 @@ describe('catalogService.fetchListings', () => {
         expect(requested).toContain('income_min=100');
         expect(requested).toContain('income_max=900');
         expect(requested).toContain('zones=ru%2Ccom');
+        expect(requested).toContain('categories=avto-moto%2Ckompyutery-i-it');
         expect(requested).toContain('verified=1');
+    });
+
+    it('не передаёт пустой список тематик', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [], meta: meta() }));
+
+        vi.stubGlobal('fetch', fetchMock);
+
+        await fetchListings({ categories: ['', '  '] });
+
+        expect(String(fetchMock.mock.calls[0][0])).not.toContain('categories=');
     });
 
     it('подставляет значения по умолчанию при некорректных параметрах', async () => {

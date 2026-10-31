@@ -22,11 +22,15 @@ const switchId = useId();
             Проверен
         </Label>
 
-        <Switch
-            :id="switchId"
-            :model-value="modelValue"
-            aria-label="Проверен"
-            @update:model-value="emit('update:modelValue', Boolean($event))"
-        />
+        <div class="flex h-8 items-center">
+            <Switch
+                :id="switchId"
+                :model-value="modelValue"
+                aria-label="Проверен"
+                @update:model-value="emit('update:modelValue', Boolean($event))"
+            />
+        </div>
+
+        <div class="h-4" aria-hidden="true" />
     </div>
 </template>

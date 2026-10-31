@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
+import CategoriesField from '@/components/catalog/CategoriesField.vue';
 import DomainZoneField from '@/components/catalog/DomainZoneField.vue';
 import IncomeRangeField from '@/components/catalog/IncomeRangeField.vue';
 import PriceRangeField from '@/components/catalog/PriceRangeField.vue';
@@ -14,6 +15,8 @@ const props = defineProps({
     applied: { type: Object, required: true },
     zones: { type: Array, default: () => [] },
     zonesLoading: { type: Boolean, default: false },
+    categories: { type: Array, default: () => [] },
+    categoriesLoading: { type: Boolean, default: false },
     activeCount: { type: Number, default: 0 },
 });
 
@@ -30,6 +33,7 @@ function cloneFilters(filters) {
         ...createDefaultFilters(),
         ...filters,
         zones: [...(filters.zones ?? [])],
+        categories: [...(filters.categories ?? [])],
     };
 }
 
@@ -45,7 +49,8 @@ function sameFilters(left, right) {
         left.incomeMin === right.incomeMin &&
         left.incomeMax === right.incomeMax &&
         left.verifiedOnly === right.verifiedOnly &&
-        [...left.zones].sort().join(',') === [...right.zones].sort().join(',')
+        [...left.zones].sort().join(',') === [...right.zones].sort().join(',') &&
+        [...left.categories].sort().join(',') === [...right.categories].sort().join(',')
     );
 }
 
@@ -116,6 +121,13 @@ const selectedZones = computed({
     },
 });
 
+const selectedCategories = computed({
+    get: () => draft.value.categories,
+    set: (categories) => {
+        draft.value.categories = categories;
+    },
+});
+
 const verifiedOnly = computed({
     get: () => draft.value.verifiedOnly,
     set: (value) => {
@@ -148,7 +160,7 @@ const verifiedOnly = computed({
             </Button>
         </div>
 
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <PriceRangeField
                 v-model="priceRange"
                 :min="PRICE_BOUNDS.min"
@@ -163,6 +175,12 @@ const verifiedOnly = computed({
                 :loading="zonesLoading"
             />
 
+            <CategoriesField
+                v-model="selectedCategories"
+                :categories="categories"
+                :loading="categoriesLoading"
+            />
+
             <IncomeRangeField
                 v-model="incomeRange"
                 :min="INCOME_BOUNDS.min"
@@ -171,7 +189,7 @@ const verifiedOnly = computed({
                 label="Доход, ₽/мес"
             />
 
-            <VerifiedField v-model="verifiedOnly" />
+            <VerifiedField v-model="verifiedOnly" class="sm:col-span-2 lg:col-span-2 xl:col-span-1" />
         </div>
     </section>
 </template>

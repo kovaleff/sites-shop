@@ -15,6 +15,7 @@ function cloneFilters(filters) {
         incomeMin: filters.incomeMin,
         incomeMax: filters.incomeMax,
         zones: [...filters.zones],
+        categories: [...filters.categories],
         verifiedOnly: filters.verifiedOnly,
     };
 }

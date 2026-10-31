@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Catalog;
 
+use App\Models\Category;
 use App\Models\Site;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -70,6 +71,33 @@ class CatalogApiTest extends TestCase
 
         $this->assertSame(['ru', 'com', 'net'], array_column($zones->json('items'), 'value'));
         $this->assertSame('.ru', $zones->json('items.0.label'));
+    }
+
+    public function test_category_filter(): void
+    {
+        $auto = Category::factory()->create(['name' => 'Авто-Мото']);
+        $it = Category::factory()->create(['name' => 'Компьютеры и IT']);
+
+        $autoSite = Site::factory()->paid()->create();
+        $autoSite->categories()->attach($auto);
+
+        $itSite = Site::factory()->paid()->create();
+        $itSite->categories()->attach($it);
+
+        Site::factory()->paid()->create();
+
+        $this->getJson('/api/v1/catalog?categories=avto-moto')
+            ->assertOk()
+            ->assertJsonCount(1, 'items')
+            ->assertJsonPath('items.0.id', $autoSite->id);
+
+        $this->getJson('/api/v1/catalog?categories=avto-moto,kompiutery-i-it')
+            ->assertOk()
+            ->assertJsonCount(2, 'items');
+
+        $this->getJson('/api/v1/catalog?categories=unknown')
+            ->assertOk()
+            ->assertJsonCount(0, 'items');
     }
 
     public function test_verified_filter(): void

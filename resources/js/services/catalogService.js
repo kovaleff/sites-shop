@@ -1,5 +1,5 @@
 import { INCOME_BOUNDS, PAGE_SIZE, PRICE_BOUNDS } from '@/lib/catalogConfig';
-import { sortZones } from '@/lib/catalogFilters';
+import { sortCategories, sortZones } from '@/lib/catalogFilters';
 import { fetchJson } from '@/services/http';
 
 /**
@@ -44,6 +44,16 @@ function buildQuery(query = {}) {
 
     if (zones.length > 0) {
         params.set('zones', zones.join(','));
+    }
+
+    const categories = sortCategories(
+        (Array.isArray(query.categories) ? query.categories : [])
+            .map((slug) => String(slug).trim().toLowerCase())
+            .filter(Boolean),
+    );
+
+    if (categories.length > 0) {
+        params.set('categories', categories.join(','));
     }
 
     if (query.verifiedOnly === true) {

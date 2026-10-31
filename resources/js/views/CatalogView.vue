@@ -14,6 +14,7 @@ import { useCatalogQuery } from '@/composables/useCatalogQuery';
 import { countActiveFilters } from '@/lib/catalogFilters';
 import { fallbackZones } from '@/mocks/zones';
 import { fetchZones } from '@/services/catalogService';
+import { fetchCategories } from '@/services/categoriesService';
 import { useCatalogStore } from '@/stores/catalog';
 
 const catalog = useCatalogStore();
@@ -21,12 +22,16 @@ const { applied, items, total, status, error, page, lastPage } = storeToRefs(cat
 
 const zones = ref([]);
 const zonesLoading = ref(true);
+const categories = ref([]);
+const categoriesLoading = ref(true);
 const contactListing = ref(null);
 const isContactOpen = ref(false);
 
 const zoneValues = computed(() => zones.value.map((zone) => zone.value));
+const categorySlugs = computed(() => categories.value.map((category) => category.slug));
 const { hydrateFromRoute, pushFilters, replacePage, clearFilters } = useCatalogQuery(
     () => zoneValues.value,
+    () => categorySlugs.value,
 );
 
 const activeCount = computed(() => countActiveFilters(applied.value));
@@ -40,7 +45,7 @@ const showEmpty = computed(() => status.value === 'success' && total.value === 0
 const showPagination = computed(() => status.value === 'success' && total.value > 0);
 
 onMounted(async () => {
-    await loadZones();
+    await Promise.all([loadZones(), loadCategories()]);
     await hydrateFromRoute();
 });
 
@@ -54,6 +59,22 @@ async function loadZones() {
         zones.value = fallbackZones.map((zone) => ({ ...zone, count: null }));
     } finally {
         zonesLoading.value = false;
+    }
+}
+
+/**
+ * Справочник тематик нужен только фильтру и форме объявления,
+ * поэтому при ошибке каталог остаётся работоспособным без него.
+ *
+ * @returns {Promise<void>}
+ */
+async function loadCategories() {
+    try {
+        categories.value = await fetchCategories();
+    } catch {
+        categories.value = [];
+    } finally {
+        categoriesLoading.value = false;
     }
 }
 
@@ -111,6 +132,8 @@ function handleContact(listing) {
             :applied="applied"
             :zones="zones"
             :zones-loading="zonesLoading"
+            :categories="categories"
+            :categories-loading="categoriesLoading"
             :active-count="activeCount"
             @apply="applyFilters"
             @reset="resetFilters"

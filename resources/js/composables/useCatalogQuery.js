@@ -14,8 +14,12 @@ import { useCatalogStore } from '@/stores/catalog';
  * Синхронизирует применённые фильтры каталога с query-параметрами URL.
  *
  * @param {(() => string[]) | string[]} [zonesSource]
+ * @param {(() => string[]) | string[]} [categoriesSource]
  */
-export function useCatalogQuery(zonesSource = () => DEFAULT_ZONES) {
+export function useCatalogQuery(
+    zonesSource = () => DEFAULT_ZONES,
+    categoriesSource = () => [],
+) {
     const catalog = useCatalogStore();
     const route = useRoute();
     const router = useRouter();
@@ -34,6 +38,24 @@ export function useCatalogQuery(zonesSource = () => DEFAULT_ZONES) {
         }
 
         return zones.map((zone) => (typeof zone === 'string' ? zone : zone.value));
+    }
+
+    /**
+     * Справочник тематик подгружается асинхронно, поэтому здесь возвращается
+     * только то, что уже известно: пустой список означает «принять значения из URL».
+     *
+     * @returns {string[]}
+     */
+    function availableCategories() {
+        const categories = typeof categoriesSource === 'function' ? categoriesSource() : categoriesSource;
+
+        if (!Array.isArray(categories)) {
+            return [];
+        }
+
+        return categories.map((category) =>
+            typeof category === 'string' ? category : category.slug,
+        );
     }
 
     /**
@@ -58,7 +80,11 @@ export function useCatalogQuery(zonesSource = () => DEFAULT_ZONES) {
      * @returns {Promise<{ outOfRange: boolean, lastPage: number }>}
      */
     async function hydrateFromRoute(targetRoute = route) {
-        const filters = parseFiltersFromQuery(targetRoute.query, availableZones());
+        const filters = parseFiltersFromQuery(
+            targetRoute.query,
+            availableZones(),
+            availableCategories(),
+        );
         const requestedPage = normalizePage(targetRoute.query.page);
 
         catalog.hydrateFilters(filters);
@@ -91,7 +117,7 @@ export function useCatalogQuery(zonesSource = () => DEFAULT_ZONES) {
      * @returns {Promise<void>}
      */
     async function pushFilters(filters, page = 1) {
-        const normalized = normalizeFilters(filters, availableZones());
+        const normalized = normalizeFilters(filters, availableZones(), availableCategories());
         const query = buildQuery(normalized, page);
 
         syncedQueryKey = queryKey(query);
@@ -129,7 +155,7 @@ export function useCatalogQuery(zonesSource = () => DEFAULT_ZONES) {
             }
 
             const serialized = buildQuery(
-                parseFiltersFromQuery(query, availableZones()),
+                parseFiltersFromQuery(query, availableZones(), availableCategories()),
                 normalizePage(query.page),
             );
 

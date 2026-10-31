@@ -45,10 +45,12 @@ export function sortZones(zones) {
 }
 
 /**
+ * Приводит список из query-параметра (строка через запятую или массив) к массиву.
+ *
  * @param {unknown} raw
- * @returns {string[]}
+ * @returns {unknown[]}
  */
-function splitZoneValues(raw) {
+function splitListValues(raw) {
     if (Array.isArray(raw)) {
         return raw;
     }
@@ -58,6 +60,36 @@ function splitZoneValues(raw) {
     }
 
     return [];
+}
+
+/**
+ * @param {string[]} categories
+ * @param {string[]} [availableCategories]
+ * @returns {string[]}
+ */
+export function sortCategories(categories, availableCategories = []) {
+    const order = new Map(
+        availableCategories.map((slug, index) => [String(slug).trim().toLowerCase(), index]),
+    );
+
+    return [...new Set(categories)].sort((left, right) => {
+        const leftIndex = order.get(left) ?? -1;
+        const rightIndex = order.get(right) ?? -1;
+
+        if (leftIndex !== -1 && rightIndex !== -1) {
+            return leftIndex - rightIndex;
+        }
+
+        if (leftIndex !== -1) {
+            return -1;
+        }
+
+        if (rightIndex !== -1) {
+            return 1;
+        }
+
+        return left.localeCompare(right);
+    });
 }
 
 /**
@@ -72,11 +104,42 @@ function normalizeZones(raw, availableZones) {
         ),
     );
 
-    const zones = splitZoneValues(raw)
+    const zones = splitListValues(raw)
         .map((zone) => String(zone).trim().toLowerCase().replace(/^\./, ''))
         .filter((zone) => zone.length > 0 && available.has(zone));
 
     return sortZones(zones);
+}
+
+/**
+ * Тематики приходят слагами. Если справочник ещё не загружен, значения из URL
+ * сохраняются как есть, чтобы фильтр не терялся при прямом переходе по ссылке.
+ *
+ * @param {unknown} raw
+ * @param {string[]} [availableCategories]
+ * @returns {string[]}
+ */
+function normalizeCategories(raw, availableCategories) {
+    const provided = [
+        ...new Set(
+            splitListValues(raw)
+                .map((slug) => String(slug).trim().toLowerCase())
+                .filter((slug) => slug.length > 0),
+        ),
+    ];
+
+    if (!availableCategories || availableCategories.length === 0) {
+        return provided;
+    }
+
+    const available = new Set(
+        availableCategories.map((slug) => String(slug).trim().toLowerCase()),
+    );
+
+    return sortCategories(
+        provided.filter((slug) => available.has(slug)),
+        availableCategories,
+    );
 }
 
 /**
@@ -94,6 +157,7 @@ function normalizeVerified(raw) {
  *   incomeMin: number,
  *   incomeMax: number,
  *   zones: string[],
+ *   categories: string[],
  *   verifiedOnly: boolean,
  * }}
  */
@@ -104,6 +168,7 @@ export function createDefaultFilters() {
         incomeMin: INCOME_BOUNDS.min,
         incomeMax: INCOME_BOUNDS.max,
         zones: [],
+        categories: [],
         verifiedOnly: false,
     };
 }
@@ -111,9 +176,10 @@ export function createDefaultFilters() {
 /**
  * @param {object | null | undefined} raw
  * @param {string[]} [availableZones]
+ * @param {string[]} [availableCategories]
  * @returns {ReturnType<typeof createDefaultFilters>}
  */
-export function normalizeFilters(raw, availableZones) {
+export function normalizeFilters(raw, availableZones, availableCategories) {
     const source = raw ?? {};
 
     let priceMin = normalizeBound(source.priceMin, PRICE_BOUNDS.min, PRICE_BOUNDS.min, PRICE_BOUNDS.max);
@@ -138,6 +204,7 @@ export function normalizeFilters(raw, availableZones) {
         incomeMin,
         incomeMax,
         zones: normalizeZones(source.zones, availableZones),
+        categories: normalizeCategories(source.categories, availableCategories),
         verifiedOnly: normalizeVerified(source.verifiedOnly),
     };
 }
@@ -145,9 +212,10 @@ export function normalizeFilters(raw, availableZones) {
 /**
  * @param {Record<string, unknown> | null | undefined} query
  * @param {string[]} [availableZones]
+ * @param {string[]} [availableCategories]
  * @returns {ReturnType<typeof createDefaultFilters>}
  */
-export function parseFiltersFromQuery(query, availableZones) {
+export function parseFiltersFromQuery(query, availableZones, availableCategories) {
     const source = query ?? {};
 
     return normalizeFilters(
@@ -157,9 +225,11 @@ export function parseFiltersFromQuery(query, availableZones) {
             incomeMin: source.income_min,
             incomeMax: source.income_max,
             zones: source.zones,
+            categories: source.categories,
             verifiedOnly: source.verified,
         },
         availableZones,
+        availableCategories,
     );
 }
 
@@ -189,6 +259,10 @@ export function serializeFiltersToQuery(filters, page = 1) {
 
     if (filters.zones.length > 0) {
         query.zones = sortZones(filters.zones).join(',');
+    }
+
+    if (filters.categories.length > 0) {
+        query.categories = sortCategories(filters.categories).join(',');
     }
 
     if (filters.verifiedOnly) {
@@ -234,6 +308,10 @@ export function countActiveFilters(filters) {
     }
 
     if (filters.zones.length > 0) {
+        count += 1;
+    }
+
+    if (filters.categories.length > 0) {
         count += 1;
     }
 

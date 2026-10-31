@@ -8,6 +8,7 @@ import {
 } from '@/lib/catalogFilters';
 
 const ZONES = ['ru', 'com', 'de'];
+const CATEGORIES = ['avto-moto', 'biznes-i-finansy', 'kompyutery-i-it'];
 
 describe('createDefaultFilters', () => {
     it('возвращает значения по умолчанию', () => {
@@ -17,6 +18,7 @@ describe('createDefaultFilters', () => {
             incomeMin: 0,
             incomeMax: 1_000_000,
             zones: [],
+            categories: [],
             verifiedOnly: false,
         });
     });
@@ -54,6 +56,30 @@ describe('parseFiltersFromQuery', () => {
         expect(parseFiltersFromQuery({ zones: 'de,com,ru' }, ZONES).zones).toEqual(['ru', 'com', 'de']);
     });
 
+    it('разбирает тематики из строки через запятую', () => {
+        expect(
+            parseFiltersFromQuery({ categories: 'kompyutery-i-it,avto-moto' }, ZONES, CATEGORIES)
+                .categories,
+        ).toEqual(['avto-moto', 'kompyutery-i-it']);
+    });
+
+    it('отбрасывает неизвестные тематики при известном справочнике', () => {
+        expect(
+            parseFiltersFromQuery({ categories: 'avto-moto,unknown' }, ZONES, CATEGORIES).categories,
+        ).toEqual(['avto-moto']);
+    });
+
+    it('сохраняет тематики из URL, пока справочник не загружен', () => {
+        expect(parseFiltersFromQuery({ categories: 'avto-moto,unknown' }, ZONES).categories).toEqual([
+            'avto-moto',
+            'unknown',
+        ]);
+    });
+
+    it('трактует пустую строку тематик как «Все тематики»', () => {
+        expect(parseFiltersFromQuery({ categories: '' }, ZONES, CATEGORIES).categories).toEqual([]);
+    });
+
     it('включает проверку только для verified=1', () => {
         expect(parseFiltersFromQuery({ verified: '0' }, ZONES).verifiedOnly).toBe(false);
         expect(parseFiltersFromQuery({ verified: 'yes' }, ZONES).verifiedOnly).toBe(false);
@@ -82,6 +108,7 @@ describe('serializeFiltersToQuery', () => {
                     incomeMin: 0,
                     incomeMax: 150_000,
                     zones: ['com', 'ru'],
+                    categories: ['kompyutery-i-it', 'avto-moto'],
                     verifiedOnly: true,
                 },
                 2,
@@ -90,6 +117,7 @@ describe('serializeFiltersToQuery', () => {
             price_min: '50000',
             income_max: '150000',
             zones: 'ru,com',
+            categories: 'avto-moto,kompyutery-i-it',
             verified: '1',
             page: '2',
         });
@@ -109,9 +137,10 @@ describe('countActiveFilters', () => {
                 incomeMin: 0,
                 incomeMax: 150_000,
                 zones: ['ru'],
+                categories: CATEGORIES,
                 verifiedOnly: false,
             }),
-        ).toBe(2);
+        ).toBe(3);
 
         expect(
             countActiveFilters({
@@ -120,9 +149,10 @@ describe('countActiveFilters', () => {
                 incomeMin: 10_000,
                 incomeMax: 150_000,
                 zones: ['ru'],
+                categories: CATEGORIES,
                 verifiedOnly: true,
             }),
-        ).toBe(4);
+        ).toBe(5);
     });
 
     it('считает диапазон 0…0 активным', () => {

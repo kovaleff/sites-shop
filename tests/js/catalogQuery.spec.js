@@ -38,7 +38,10 @@ async function setup(initialPath = '/') {
 
     const Harness = defineComponent({
         setup() {
-            api = useCatalogQuery(() => ['ru', 'com', 'de']);
+            api = useCatalogQuery(
+                () => ['ru', 'com', 'de'],
+                () => ['avto-moto', 'kompyutery-i-it'],
+            );
 
             return () => null;
         },
@@ -97,6 +100,25 @@ describe('useCatalogQuery', () => {
             price_max: '500000',
             zones: 'ru,com',
             page: '2',
+        });
+    });
+
+    it('переносит тематики из query в стор и обратно', async () => {
+        const { api, router, catalog } = await setup('/?categories=kompyutery-i-it,unknown');
+
+        await api.hydrateFromRoute();
+        await flushPromises();
+
+        expect(catalog.applied.categories).toEqual(['kompyutery-i-it']);
+
+        await api.pushFilters(
+            { ...createDefaultFilters(), categories: ['kompyutery-i-it', 'avto-moto'] },
+            1,
+        );
+        await flushPromises();
+
+        expect(router.currentRoute.value.query).toEqual({
+            categories: 'avto-moto,kompyutery-i-it',
         });
     });
 

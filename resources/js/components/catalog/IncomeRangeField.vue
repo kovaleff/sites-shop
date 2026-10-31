@@ -45,16 +45,18 @@ function updateValue(next) {
             {{ label }}
         </span>
 
-        <Slider
-            :model-value="value"
-            :min="min"
-            :max="max"
-            :step="step"
-            :min-steps-between-thumbs="0"
-            :thumb-labels="thumbLabels"
-            :thumb-value-texts="thumbValueTexts"
-            @update:model-value="updateValue"
-        />
+        <div class="flex h-8 items-center">
+            <Slider
+                :model-value="value"
+                :min="min"
+                :max="max"
+                :step="step"
+                :min-steps-between-thumbs="0"
+                :thumb-labels="thumbLabels"
+                :thumb-value-texts="thumbValueTexts"
+                @update:model-value="updateValue"
+            />
+        </div>
 
         <div class="flex items-center justify-between gap-2 text-xs tabular-nums text-muted-foreground">
             <span class="text-primary">{{ formatRubMonthly(value[0]) }}</span>
