@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ListingStatus;
+use App\Enums\ModerationStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\SiteFactory;
 use DomainException;
@@ -39,6 +40,7 @@ class Site extends Model
     protected $allowedFilters = [
         'domain' => Like::class,
         'status' => WhereIn::class,
+        'moderation_status' => WhereIn::class,
         'price' => WhereMaxMin::class,
         'monthly_revenue' => WhereMaxMin::class,
         'verified' => WhereIn::class,
@@ -64,6 +66,7 @@ class Site extends Model
      */
     protected $attributes = [
         'status' => 'active',
+        'moderation_status' => 'pending',
         'has_trademark' => false,
         'price' => 0,
         'monthly_revenue' => 0,
@@ -90,6 +93,7 @@ class Site extends Model
     {
         return [
             'status' => ListingStatus::class,
+            'moderation_status' => ModerationStatus::class,
             'price' => 'decimal:2',
             'monthly_revenue' => 'decimal:2',
             'has_trademark' => 'boolean',
@@ -97,6 +101,8 @@ class Site extends Model
             'paid_until' => 'date',
             'sold_at' => 'datetime',
             'hidden_at' => 'datetime',
+            'moderated_at' => 'datetime',
+            'verification_checked_at' => 'datetime',
         ];
     }
 
@@ -155,10 +161,16 @@ class Site extends Model
         return $this->hasMany(SubscriptionPayment::class);
     }
 
+    public function reports(): HasMany
+    {
+        return $this->hasMany(SiteReport::class);
+    }
+
     #[Scope]
     protected function publiclyVisible(Builder $query): void
     {
         $query->where('status', ListingStatus::Active)
+            ->where('moderation_status', ModerationStatus::Approved)
             ->whereNotNull('paid_until')
             ->whereDate('paid_until', '>=', today()->toDateString());
     }
@@ -231,6 +243,7 @@ class Site extends Model
     public function isPubliclyVisible(): bool
     {
         return $this->status === ListingStatus::Active
+            && $this->moderation_status === ModerationStatus::Approved
             && $this->paid_until !== null
             && ! $this->paid_until->lt(today());
     }
@@ -312,6 +325,65 @@ class Site extends Model
         }
 
         $this->verified = $verified;
+        $this->save();
+    }
+
+    /**
+     * Автоподтверждение владения доменом: включает `verified` и, если объявление
+     * ещё ждёт проверки, автоматически одобряет его.
+     */
+    public function markDomainVerified(): void
+    {
+        $this->verified = true;
+        $this->verification_checked_at = now();
+        $this->verification_error = null;
+
+        if ($this->moderation_status === ModerationStatus::Pending) {
+            $this->moderation_status = ModerationStatus::Approved;
+            $this->moderation_note = null;
+            $this->moderated_at = now();
+        }
+
+        $this->save();
+    }
+
+    public function markDomainVerificationFailed(string $reason): void
+    {
+        $this->verified = false;
+        $this->verification_checked_at = now();
+        $this->verification_error = Str::limit($reason, 250, '');
+        $this->save();
+    }
+
+    /**
+     * Ручное решение модератора.
+     */
+    public function setModeration(ModerationStatus $status, ?string $note = null): void
+    {
+        if ($this->moderation_status === $status && $this->moderation_note === $note) {
+            return;
+        }
+
+        $this->moderation_status = $status;
+        $this->moderation_note = $note;
+        $this->moderated_at = now();
+        $this->save();
+    }
+
+    /**
+     * Домен изменился — подтверждение владения нужно пройти заново.
+     */
+    public function resetDomainVerification(): void
+    {
+        $this->verified = false;
+        $this->verification_checked_at = null;
+        $this->verification_error = null;
+
+        if ($this->moderation_status === ModerationStatus::Approved) {
+            $this->moderation_status = ModerationStatus::Pending;
+            $this->moderated_at = null;
+        }
+
         $this->save();
     }
 

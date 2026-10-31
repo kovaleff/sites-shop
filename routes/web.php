@@ -2,10 +2,12 @@
 
 use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\ConfigController;
 use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\MySiteController;
 use App\Http\Controllers\Api\SessionController;
+use App\Http\Controllers\Api\SiteReportController;
 use App\Http\Controllers\Api\SiteStatusController;
 use App\Http\Controllers\Api\SiteVisibilityController;
 use App\Http\Controllers\Api\UnreadMessageController;
@@ -52,13 +54,17 @@ Route::post('/api/v1/auth/logout', [SessionController::class, 'logout'])->name('
 
 // JSON-API кабинета и публичного каталога (contracts/cabinet-api.yaml).
 Route::prefix('api/v1')->group(function () {
+    Route::get('/config', ConfigController::class)->name('api.v1.config');
+
     Route::get('/catalog', [CatalogController::class, 'index'])->name('api.v1.catalog');
     Route::get('/catalog/zones', [CatalogController::class, 'zones'])->name('api.v1.catalog.zones');
     Route::get('/categories', [CategoryController::class, 'index'])->name('api.v1.categories');
 
     Route::middleware('auth')->group(function () {
         Route::get('/my/sites', [MySiteController::class, 'index'])->name('api.v1.my-sites.index');
-        Route::post('/my/sites', [MySiteController::class, 'store'])->name('api.v1.my-sites.store');
+        Route::post('/my/sites', [MySiteController::class, 'store'])
+            ->middleware('throttle:create-site')
+            ->name('api.v1.my-sites.store');
         Route::get('/my/sites/{site}', [MySiteController::class, 'show'])->name('api.v1.my-sites.show');
         Route::patch('/my/sites/{site}', [MySiteController::class, 'update'])->name('api.v1.my-sites.update');
         Route::patch('/my/sites/{site}/status', [SiteStatusController::class, 'update'])->name('api.v1.my-sites.status');
@@ -70,5 +76,9 @@ Route::prefix('api/v1')->group(function () {
         Route::get('/conversations/{conversation}', [ConversationController::class, 'show'])->name('api.v1.conversations.show');
         Route::post('/conversations/{conversation}/messages', [MessageController::class, 'store'])->name('api.v1.conversations.messages.store');
         Route::get('/messages/unread', [UnreadMessageController::class, 'index'])->name('api.v1.messages.unread');
+
+        Route::post('/sites/{site}/reports', [SiteReportController::class, 'store'])
+            ->middleware('throttle:5,1')
+            ->name('api.v1.sites.reports.store');
     });
 });

@@ -3,7 +3,10 @@
 namespace App\Http\Requests;
 
 use App\Rules\AvailableDomain;
+use App\Rules\NoAdvertisingContent;
+use App\Rules\SmartCaptcha;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class StoreSiteRequest extends FormRequest
 {
@@ -21,7 +24,7 @@ class StoreSiteRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => ['required', 'string', 'min:3', 'max:255'],
+            'title' => ['required', 'string', 'min:3', 'max:255', new NoAdvertisingContent],
             'domain' => [
                 'required',
                 'string',
@@ -29,13 +32,41 @@ class StoreSiteRequest extends FormRequest
                 'regex:/^(?=.{1,253}$)(?!-)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i',
                 new AvailableDomain($this->ignoreSiteId()),
             ],
-            'description' => ['required', 'string', 'min:50', 'max:5000'],
+            'description' => ['required', 'string', 'min:50', 'max:5000', new NoAdvertisingContent],
             'price' => ['required', 'numeric', 'min:0', 'max:9999999999'],
             'monthlyRevenue' => ['required', 'numeric', 'min:0', 'max:9999999999'],
             'hasTrademark' => ['sometimes', 'boolean'],
             'categories' => ['required', 'array', 'min:1'],
             'categories.*' => ['integer', 'exists:categories,id'],
         ];
+    }
+
+    /**
+     * Капча проверяется отдельно: поле может отсутствовать в запросе,
+     * а обычное правило на отсутствующее поле не запускается.
+     *
+     * @return array<int, callable>
+     */
+    public function after(): array
+    {
+        if (! $this->shouldVerifyCaptcha()) {
+            return [];
+        }
+
+        return [
+            function (Validator $validator): void {
+                (new SmartCaptcha)->validate(
+                    'captchaToken',
+                    $this->input('captchaToken'),
+                    fn (string $message) => $validator->errors()->add('captchaToken', $message),
+                );
+            },
+        ];
+    }
+
+    protected function shouldVerifyCaptcha(): bool
+    {
+        return true;
     }
 
     /**

@@ -10,6 +10,7 @@ import CatalogPagination from '@/components/catalog/CatalogPagination.vue';
 import CatalogSkeletons from '@/components/catalog/CatalogSkeletons.vue';
 import ContactSellerDialog from '@/components/catalog/ContactSellerDialog.vue';
 import ListingList from '@/components/catalog/ListingList.vue';
+import ReportListingDialog from '@/components/catalog/ReportListingDialog.vue';
 import { useCatalogQuery } from '@/composables/useCatalogQuery';
 import { countActiveFilters } from '@/lib/catalogFilters';
 import { fallbackZones } from '@/mocks/zones';
@@ -26,6 +27,8 @@ const categories = ref([]);
 const categoriesLoading = ref(true);
 const contactListing = ref(null);
 const isContactOpen = ref(false);
+const reportListing = ref(null);
+const isReportOpen = ref(false);
 
 const zoneValues = computed(() => zones.value.map((zone) => zone.value));
 const categorySlugs = computed(() => categories.value.map((category) => category.slug));
@@ -114,6 +117,15 @@ function handleContact(listing) {
     contactListing.value = listing;
     isContactOpen.value = true;
 }
+
+/**
+ * @param {object} listing
+ * @returns {void}
+ */
+function handleReport(listing) {
+    reportListing.value = listing;
+    isReportOpen.value = true;
+}
 </script>
 
 <template>
@@ -168,6 +180,7 @@ function handleContact(listing) {
                 :total="total"
                 :loading="status === 'loading'"
                 @contact="handleContact"
+                @report="handleReport"
             />
 
             <CatalogPagination
@@ -180,4 +193,5 @@ function handleContact(listing) {
     </main>
 
     <ContactSellerDialog v-model:open="isContactOpen" :listing="contactListing" />
+    <ReportListingDialog v-model:open="isReportOpen" :listing="reportListing" />
 </template>

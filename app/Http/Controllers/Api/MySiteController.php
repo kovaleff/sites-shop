@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\ListingStatus;
+use App\Enums\ModerationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSiteRequest;
 use App\Http\Requests\UpdateSiteRequest;
 use App\Http\Resources\SiteResource;
+use App\Jobs\VerifySiteDomain;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -46,9 +49,13 @@ class MySiteController extends Controller
     {
         $data = $request->validated();
 
+        $this->ensureListingLimit($request->user());
+
         $site = $request->user()->sites()->create($this->attributes($data));
 
         $site->categories()->sync($data['categories']);
+
+        VerifySiteDomain::dispatch($site->getKey())->afterCommit();
 
         return (new SiteResource($site->load('categories')))
             ->response()
@@ -85,7 +92,38 @@ class MySiteController extends Controller
         $model->update($this->attributes($data));
         $model->categories()->sync($data['categories']);
 
+        if ($model->wasChanged('domain')) {
+            $model->resetDomainVerification();
+            VerifySiteDomain::dispatch($model->getKey())->afterCommit();
+        } elseif (! $model->verified) {
+            VerifySiteDomain::dispatch($model->getKey())->afterCommit();
+        } elseif ($model->moderation_status === ModerationStatus::Rejected) {
+            $model->setModeration(ModerationStatus::Pending, 'Объявление отредактировано продавцом.');
+        }
+
         return new SiteResource($model->load('categories'));
+    }
+
+    /**
+     * Ограничение числа объявлений в активных статусах на одного продавца.
+     */
+    private function ensureListingLimit(User $user): void
+    {
+        $limit = (int) config('sites.max_active_per_user');
+
+        if ($limit <= 0) {
+            return;
+        }
+
+        $activeListings = $user->sites()
+            ->whereIn('status', [ListingStatus::Active->value, ListingStatus::Inactive->value])
+            ->count();
+
+        if ($activeListings >= $limit) {
+            throw ValidationException::withMessages([
+                'title' => "Достигнут лимит объявлений ({$limit}). Снимите с продажи лишние объявления.",
+            ]);
+        }
     }
 
     /**

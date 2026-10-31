@@ -8,7 +8,7 @@ defineProps({
     loading: { type: Boolean, default: false },
 });
 
-defineEmits(['contact']);
+defineEmits(['contact', 'report']);
 </script>
 
 <template>
@@ -29,6 +29,7 @@ defineEmits(['contact']);
                 :key="listing.id"
                 :listing="listing"
                 @contact="$emit('contact', $event)"
+                @report="$emit('report', $event)"
             />
         </div>
     </div>

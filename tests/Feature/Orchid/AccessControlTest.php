@@ -44,9 +44,10 @@ class AccessControlTest extends OrchidTestCase
             ->values()
             ->all();
 
-        $this->assertSame(['Объявления'], $visible);
+        $this->assertSame(['Объявления', 'Модерация'], $visible);
 
         $this->get(route('platform.marketplace.sites'))->assertOk();
+        $this->get(route('platform.marketplace.moderation'))->assertOk();
         $this->get(route('platform.marketplace.categories'))->assertForbidden();
     }
 }

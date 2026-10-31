@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\ListingStatus;
+use App\Enums\ModerationStatus;
 use App\Models\Site;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -28,6 +29,7 @@ class SiteFactory extends Factory
             'monthly_revenue' => fake()->numberBetween(0, 500_000),
             'has_trademark' => fake()->boolean(),
             'status' => ListingStatus::Active,
+            'moderation_status' => ModerationStatus::Approved,
             'paid_until' => null,
             'sold_at' => null,
         ];
@@ -87,6 +89,21 @@ class SiteFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'verified' => true,
+        ]);
+    }
+
+    public function pendingModeration(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'moderation_status' => ModerationStatus::Pending,
+        ]);
+    }
+
+    public function rejectedModeration(?string $note = null): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'moderation_status' => ModerationStatus::Rejected,
+            'moderation_note' => $note ?? 'Не соответствует правилам площадки.',
         ]);
     }
 

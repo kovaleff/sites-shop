@@ -98,8 +98,18 @@ const zoneLabel = computed(() =>
             </span>
         </div>
 
-        <Button class="col-span-2 w-full lg:col-span-1 lg:w-auto" size="sm" @click="$emit('contact', listing)">
-            Связаться
-        </Button>
+        <div class="col-span-2 flex flex-col items-stretch gap-1 lg:col-span-1 lg:w-auto">
+            <Button class="w-full" size="sm" @click="$emit('contact', listing)">
+                Связаться
+            </Button>
+            <Button
+                variant="ghost"
+                size="xs"
+                class="w-full text-muted-foreground"
+                @click="$emit('report', listing)"
+            >
+                Пожаловаться
+            </Button>
+        </div>
     </Card>
 </template>

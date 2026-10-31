@@ -1,9 +1,10 @@
 <script setup>
-import { reactive, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SmartCaptchaField from '@/components/cabinet/SmartCaptchaField.vue';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -30,9 +31,12 @@ const props = defineProps({
     errors: { type: Object, default: () => ({}) },
     submitting: { type: Boolean, default: false },
     submitLabel: { type: String, default: 'Сохранить' },
+    captcha: { type: Object, default: null },
 });
 
 const emit = defineEmits(['submit', 'cancel']);
+
+const captchaToken = ref('');
 
 const form = reactive({
     ...props.initial,
@@ -83,6 +87,7 @@ function submit() {
         monthlyRevenue: Number(form.monthlyRevenue),
         hasTrademark: Boolean(form.hasTrademark),
         categories: [...form.categories],
+        ...(captchaToken.value ? { captchaToken: captchaToken.value } : {}),
     });
 }
 </script>
@@ -198,6 +203,16 @@ function submit() {
         </fieldset>
 
         <p v-if="errors.siteId" class="text-xs text-destructive">{{ errors.siteId[0] }}</p>
+
+        <SmartCaptchaField
+            v-if="captcha?.enabled && captcha.siteKey"
+            :site-key="captcha.siteKey"
+            @update:token="captchaToken = $event"
+        />
+
+        <p v-if="errors.captchaToken" class="text-xs text-destructive">
+            {{ errors.captchaToken[0] }}
+        </p>
 
         <div class="flex flex-wrap gap-2">
             <Button type="submit" :disabled="submitting">

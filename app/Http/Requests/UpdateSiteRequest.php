@@ -10,4 +10,12 @@ class UpdateSiteRequest extends StoreSiteRequest
 
         return is_numeric($site) ? (int) $site : null;
     }
+
+    /**
+     * Капча нужна только при создании объявления.
+     */
+    protected function shouldVerifyCaptcha(): bool
+    {
+        return false;
+    }
 }

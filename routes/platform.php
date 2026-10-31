@@ -20,6 +20,7 @@ use App\Orchid\Screens\Message\MessageShowScreen;
 use App\Orchid\Screens\PlatformScreen;
 use App\Orchid\Screens\Role\RoleEditScreen;
 use App\Orchid\Screens\Role\RoleListScreen;
+use App\Orchid\Screens\Site\ModerationQueueScreen;
 use App\Orchid\Screens\Site\SiteEditScreen;
 use App\Orchid\Screens\Site\SiteListScreen;
 use App\Orchid\Screens\SubscriptionPayment\SubscriptionPaymentListScreen;
@@ -93,6 +94,13 @@ Route::screen('roles', RoleListScreen::class)
     ->breadcrumbs(fn (Trail $trail) => $trail
         ->parent('platform.index')
         ->push(__('Roles'), route('platform.systems.roles')));
+
+// Platform > Marketplace > Moderation
+Route::screen('marketplace/moderation', ModerationQueueScreen::class)
+    ->name('platform.marketplace.moderation')
+    ->breadcrumbs(fn (Trail $trail) => $trail
+        ->parent('platform.index')
+        ->push('Модерация', route('platform.marketplace.moderation')));
 
 // Platform > Marketplace > Sites
 Route::screen('marketplace/sites', SiteListScreen::class)

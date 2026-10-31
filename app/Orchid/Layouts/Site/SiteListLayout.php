@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Orchid\Layouts\Site;
 
 use App\Enums\ListingStatus;
+use App\Enums\ModerationStatus;
 use App\Models\Site;
 use Orchid\Screen\Actions\Link;
 use Orchid\Screen\Layouts\Table;
@@ -58,6 +59,12 @@ class SiteListLayout extends Table
                 ->alignRight()
                 ->filter(TD::FILTER_NUMBER_RANGE)
                 ->render(fn (Site $site) => number_format((float) $site->monthly_revenue, 2, '.', ' ')),
+
+            TD::make('moderation_status', 'Модерация')
+                ->filter(TD::FILTER_SELECT, collect(ModerationStatus::cases())
+                    ->mapWithKeys(fn (ModerationStatus $status) => [$status->value => $status->label()])
+                    ->all())
+                ->render(fn (Site $site) => $site->moderation_status->label()),
 
             TD::make('verified', 'Подтверждён')
                 ->sort()

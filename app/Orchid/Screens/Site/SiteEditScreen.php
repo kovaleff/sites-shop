@@ -5,10 +5,15 @@ declare(strict_types=1);
 namespace App\Orchid\Screens\Site;
 
 use App\Enums\ListingStatus;
+use App\Enums\ModerationStatus;
+use App\Enums\ReportStatus;
+use App\Jobs\VerifySiteDomain;
 use App\Models\Site;
 use App\Orchid\Layouts\Site\SiteConversationsTable;
 use App\Orchid\Layouts\Site\SiteEditLayout;
+use App\Orchid\Layouts\Site\SiteModerationLayout;
 use App\Orchid\Layouts\Site\SitePaymentsTable;
+use App\Orchid\Layouts\Site\SiteReportsTable;
 use App\Orchid\Layouts\Site\SiteStatusLayout;
 use App\Orchid\Layouts\Site\SiteVerificationLayout;
 use Closure;
@@ -16,6 +21,7 @@ use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Orchid\Screen\Action;
 use Orchid\Screen\Actions\Button;
 use Orchid\Screen\Screen;
@@ -42,6 +48,10 @@ class SiteEditScreen extends Screen
                 'monthly_revenue' => $site->monthly_revenue,
                 'has_trademark' => $site->has_trademark,
                 'status' => $site->status->value,
+                'moderation_status' => $site->moderation_status->value,
+                'moderation_note' => $site->moderation_note,
+                'verification_checked_at' => $site->verification_checked_at?->format('d.m.Y H:i') ?? '—',
+                'verification_error' => $site->verification_error ?? '—',
                 'verified' => $site->verified,
                 'verification_filename' => $site->verification_filename,
                 'paid_until' => $site->paid_until?->format('d.m.Y'),
@@ -56,6 +66,11 @@ class SiteEditScreen extends Screen
                 ->with(['buyer', 'seller'])
                 ->latest('last_message_at')
                 ->limit(10)
+                ->get(),
+            'reports' => $site->reports()
+                ->with('reporter')
+                ->latest()
+                ->limit(20)
                 ->get(),
         ];
     }
@@ -102,6 +117,11 @@ class SiteEditScreen extends Screen
                 ->method('changeStatus')
                 ->canSee($site !== null && $site->status->allowedTransitions() !== []),
 
+            Button::make('Проверить домен')
+                ->icon('bs.shield-check')
+                ->method('verifyDomain')
+                ->canSee($site !== null && ! $site->verified),
+
             Button::make('Сохранить')
                 ->icon('bs.check-circle')
                 ->method('save'),
@@ -121,6 +141,9 @@ class SiteEditScreen extends Screen
             Layout::block(SiteStatusLayout::class)
                 ->title('Статус'),
 
+            Layout::block(SiteModerationLayout::class)
+                ->title('Модерация'),
+
             Layout::block(SiteVerificationLayout::class)
                 ->title('Подтверждение владения и подписка'),
 
@@ -129,6 +152,9 @@ class SiteEditScreen extends Screen
 
             Layout::block(SiteConversationsTable::class)
                 ->title('Последние диалоги'),
+
+            Layout::block(SiteReportsTable::class)
+                ->title('Жалобы пользователей'),
         ];
     }
 
@@ -168,6 +194,8 @@ class SiteEditScreen extends Screen
             'site.categories' => ['required', 'array', 'min:1'],
             'site.categories.*' => ['integer', 'exists:categories,id'],
             'site.verified' => ['boolean'],
+            'site.moderation_status' => ['sometimes', 'string', Rule::in(ModerationStatus::values())],
+            'site.moderation_note' => ['nullable', 'string', 'max:255'],
         ]);
 
         DB::transaction(function () use ($request, $site): void {
@@ -179,6 +207,13 @@ class SiteEditScreen extends Screen
             $site->categories()->sync($request->input('site.categories', []));
 
             $site->markVerified((bool) $request->input('site.verified', false));
+
+            if ($request->filled('site.moderation_status')) {
+                $site->setModeration(
+                    ModerationStatus::from($request->input('site.moderation_status')),
+                    $request->input('site.moderation_note'),
+                );
+            }
         });
 
         Toast::info('Объявление сохранено.');
@@ -215,6 +250,50 @@ class SiteEditScreen extends Screen
         }
 
         Toast::info('Статус объявления изменён.');
+    }
+
+    /**
+     * Повторный запуск проверки владения доменом.
+     */
+    public function verifyDomain(Site $site): void
+    {
+        VerifySiteDomain::dispatch($site->getKey());
+
+        Toast::info('Проверка домена запущена.');
+    }
+
+    /**
+     * Жалоба принята: объявление снимается с публикации.
+     */
+    public function resolveReport(Request $request, Site $site): void
+    {
+        $report = $site->reports()->find((int) $request->input('report'));
+
+        if ($report === null) {
+            Toast::error('Жалоба не найдена.');
+
+            return;
+        }
+
+        $report->resolve(ReportStatus::Resolved);
+        $site->setModeration(ModerationStatus::Rejected, 'Жалоба принята: '.$report->reason->label());
+
+        Toast::warning('Жалоба принята, объявление снято с публикации.');
+    }
+
+    public function dismissReport(Request $request, Site $site): void
+    {
+        $report = $site->reports()->find((int) $request->input('report'));
+
+        if ($report === null) {
+            Toast::error('Жалоба не найдена.');
+
+            return;
+        }
+
+        $report->resolve(ReportStatus::Dismissed);
+
+        Toast::info('Жалоба отклонена.');
     }
 
     private function normalizeDomain(?string $domain): ?string

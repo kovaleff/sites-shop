@@ -45,6 +45,11 @@ class PlatformProvider extends OrchidServiceProvider
                 ->route('platform.marketplace.sites')
                 ->permission('platform.marketplace.sites'),
 
+            Menu::make('Модерация')
+                ->icon('bs.shield-check')
+                ->route('platform.marketplace.moderation')
+                ->permission('platform.marketplace.sites'),
+
             Menu::make('Диалоги')
                 ->icon('bs.chat-dots')
                 ->route('platform.marketplace.conversations')

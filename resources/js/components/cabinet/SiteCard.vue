@@ -5,6 +5,7 @@ import { MessageSquare, Pencil, Archive, ArchiveRestore } from '@lucide/vue';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import ModerationBadge from '@/components/cabinet/ModerationBadge.vue';
 import StatusBadge from '@/components/cabinet/StatusBadge.vue';
 import StatusMenu from '@/components/cabinet/StatusMenu.vue';
 import SubscriptionBlock from '@/components/cabinet/SubscriptionBlock.vue';
@@ -19,6 +20,8 @@ const props = defineProps({
 const emit = defineEmits(['edit', 'change', 'hide', 'restore']);
 
 const isSold = computed(() => props.site.status === 'sold');
+
+const needsModeration = computed(() => props.site.moderationStatus !== 'approved');
 </script>
 
 <template>
@@ -28,6 +31,11 @@ const isSold = computed(() => props.site.status === 'sold');
                 <div class="flex flex-wrap items-center gap-2">
                     <h3 class="text-base font-bold text-foreground">{{ site.title }}</h3>
                     <StatusBadge :status="site.status" :label="site.statusLabel" />
+                    <ModerationBadge
+                        v-if="needsModeration"
+                        :status="site.moderationStatus"
+                        :label="site.moderationStatusLabel"
+                    />
                 </div>
 
                 <p class="mt-1 text-sm text-muted-foreground">
@@ -41,6 +49,13 @@ const isSold = computed(() => props.site.status === 'sold');
                 <span class="text-xs text-muted-foreground">{{ formatRubMonthly(site.monthlyRevenue) }}</span>
             </div>
         </div>
+
+        <p
+            v-if="site.moderationStatus === 'rejected' && site.moderationNote"
+            class="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+        >
+            {{ site.moderationNote }}
+        </p>
 
         <div class="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span v-if="site.hasTrademark">Товарный знак есть</span>

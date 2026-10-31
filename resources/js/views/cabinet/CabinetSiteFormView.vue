@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createSite, fetchSite, updateSite } from '@/services/cabinetService';
 import { fetchCategories } from '@/services/categoriesService';
+import { fetchPublicConfig } from '@/services/configService';
 
 const route = useRoute();
 const router = useRouter();
@@ -19,6 +20,7 @@ const siteId = computed(() => Number(route.params.id));
 
 const categories = ref([]);
 const categoriesError = ref(false);
+const captcha = ref(null);
 const initial = ref(blankSite());
 const errors = ref({});
 const submitting = ref(false);
@@ -41,7 +43,7 @@ function blankSite() {
 }
 
 onMounted(async () => {
-    await loadCategories();
+    await Promise.all([loadCategories(), loadConfig()]);
 
     if (isEdit.value) {
         await loadSite();
@@ -49,6 +51,19 @@ onMounted(async () => {
 
     loading.value = false;
 });
+
+/**
+ * Капча включается только когда на сервере заданы ключи.
+ *
+ * @returns {Promise<void>}
+ */
+async function loadConfig() {
+    try {
+        captcha.value = (await fetchPublicConfig())?.captcha ?? null;
+    } catch {
+        captcha.value = null;
+    }
+}
 
 /**
  * @returns {Promise<void>}
@@ -143,7 +158,7 @@ function cancel() {
                 {{ isEdit ? 'Редактирование объявления' : 'Новое объявление' }}
             </h1>
             <p class="text-sm text-muted-foreground">
-                Объявление появится в каталоге после оплаты подписки.
+                Объявление появится в каталоге после оплаты подписки и подтверждения владения доменом.
             </p>
         </div>
 
@@ -159,6 +174,11 @@ function cancel() {
                 :filename="created.verificationFilename"
                 :verified="created.verified"
             />
+
+            <p class="text-sm text-muted-foreground">
+                Объявление сейчас на проверке. Как только файл подтверждения появится на сайте,
+                оно будет одобрено автоматически — следить за статусом можно в списке объявлений.
+            </p>
 
             <div class="flex flex-wrap gap-2">
                 <Button type="button" @click="router.push({ name: 'cabinet-sites' })">
@@ -187,6 +207,7 @@ function cancel() {
                 :categories="categories"
                 :errors="errors"
                 :submitting="submitting"
+                :captcha="captcha"
                 :submit-label="isEdit ? 'Сохранить изменения' : 'Сохранить объявление'"
                 @submit="submit"
                 @cancel="cancel"
