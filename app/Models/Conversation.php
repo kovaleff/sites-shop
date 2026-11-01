@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\MessagePosted;
 use Database\Factories\ConversationFactory;
 use DomainException;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -130,10 +131,14 @@ class Conversation extends Model
             throw new DomainException('The user cannot post to this conversation.');
         }
 
-        return DB::transaction(fn (): Message => $this->messages()->forceCreate([
+        $message = DB::transaction(fn (): Message => $this->messages()->forceCreate([
             'sender_id' => $sender->id,
             'body' => $body,
         ]));
+
+        MessagePosted::dispatch($message);
+
+        return $message;
     }
 
     public function unreadCountFor(User $user): int

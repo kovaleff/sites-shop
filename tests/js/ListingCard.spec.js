@@ -9,6 +9,8 @@ import ListingCard from '@/components/catalog/ListingCard.vue';
 function createListing(overrides = {}) {
     return {
         id: 'lst_0001',
+        slug: 'lst_0001-servis-dostavki',
+        url: '/site/lst_0001-servis-dostavki',
         title: 'Сервис доставки фермерских продуктов',
         domain: 'ferma-dostavka.ru',
         domainZone: 'ru',
@@ -23,9 +25,30 @@ function createListing(overrides = {}) {
     };
 }
 
+/**
+ * RouterLink заменяется ссылкой: тесту не нужен настоящий роутер,
+ * но разметка `<a href>` должна остаться проверяемой.
+ *
+ * @param {object} listing
+ * @returns {import('@vue/test-utils').VueWrapper}
+ */
+function mountCard(listing) {
+    return mount(ListingCard, {
+        props: { listing },
+        global: {
+            stubs: {
+                RouterLink: {
+                    props: ['to'],
+                    template: '<a :data-to="JSON.stringify(to)"><slot /></a>',
+                },
+            },
+        },
+    });
+}
+
 describe('ListingCard', () => {
     it('отображает обязательные поля лота', () => {
-        const wrapper = mount(ListingCard, { props: { listing: createListing() } });
+        const wrapper = mountCard(createListing());
 
         expect(wrapper.text()).toContain('Сервис доставки фермерских продуктов');
         expect(wrapper.text()).toContain('ferma-dostavka.ru');
@@ -39,42 +62,44 @@ describe('ListingCard', () => {
     });
 
     it('показывает нулевые цену и доход', () => {
-        const wrapper = mount(ListingCard, {
-            props: { listing: createListing({ price: 0, monthlyIncome: 0 }) },
-        });
+        const wrapper = mountCard(createListing({ price: 0, monthlyIncome: 0 }));
 
         expect(wrapper.text()).toContain('0\u00A0₽');
         expect(wrapper.text()).toContain('0\u00A0₽/мес');
     });
 
     it('не ломает разметку без описания', () => {
-        const wrapper = mount(ListingCard, {
-            props: { listing: createListing({ description: null, isVerified: false }) },
-        });
+        const wrapper = mountCard(createListing({ description: null, isVerified: false }));
 
         expect(wrapper.find('.line-clamp-2').exists()).toBe(true);
         expect(wrapper.text()).toContain('Нет');
     });
 
     it('показывает первую букву домена при отсутствии иконки', () => {
-        const wrapper = mount(ListingCard, {
-            props: { listing: createListing({ faviconUrl: null }) },
-        });
+        const wrapper = mountCard(createListing({ faviconUrl: null }));
 
         expect(wrapper.find('img').exists()).toBe(false);
         expect(wrapper.html()).toContain('>F<');
     });
 
     it('обрезает название и описание двумя строками', () => {
-        const wrapper = mount(ListingCard, { props: { listing: createListing() } });
+        const wrapper = mountCard(createListing());
 
         expect(wrapper.findAll('.line-clamp-2').length).toBeGreaterThanOrEqual(2);
     });
 
+    it('ведёт на страницу лота по слагу', () => {
+        const wrapper = mountCard(createListing());
+
+        const link = wrapper.find('h3 a');
+
+        expect(link.exists()).toBe(true);
+        expect(link.text()).toContain('Сервис доставки фермерских продуктов');
+        expect(link.attributes('data-to')).toContain('lst_0001-servis-dostavki');
+    });
+
     it('передаёт статус и проверку текстом', () => {
-        const wrapper = mount(ListingCard, {
-            props: { listing: createListing({ isVerified: false }) },
-        });
+        const wrapper = mountCard(createListing({ isVerified: false }));
 
         expect(wrapper.text()).toContain('Нет');
         expect(wrapper.text()).toContain('Активен');
@@ -82,9 +107,12 @@ describe('ListingCard', () => {
 
     it('эмитит contact без навигации', async () => {
         const listing = createListing();
-        const wrapper = mount(ListingCard, { props: { listing } });
+        const wrapper = mountCard(listing);
 
-        await wrapper.findAll('button').find((button) => button.text().includes('Связаться')).trigger('click');
+        await wrapper
+            .findAll('button')
+            .find((button) => button.text().includes('Связаться'))
+            .trigger('click');
 
         expect(wrapper.emitted('contact')).toHaveLength(1);
         expect(wrapper.emitted('contact')[0][0]).toMatchObject({ id: listing.id });

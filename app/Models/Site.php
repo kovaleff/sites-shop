@@ -4,6 +4,9 @@ namespace App\Models;
 
 use App\Enums\ListingStatus;
 use App\Enums\ModerationStatus;
+use App\Events\SiteModerationChanged;
+use App\Http\Controllers\SitemapController;
+use App\Services\Seo\ListingImageGenerator;
 use Carbon\CarbonImmutable;
 use Database\Factories\SiteFactory;
 use DomainException;
@@ -81,6 +84,16 @@ class Site extends Model
 
         static::saving(function (Site $site): void {
             $site->domain_zone = $site->zoneFromDomain($site->domain);
+        });
+
+        // Лот изменился: сбрасываем карту сайта и кэш картинки превью.
+        static::saved(function (Site $site): void {
+            SitemapController::flush();
+            app(ListingImageGenerator::class)->forget($site);
+        });
+
+        static::deleted(function (): void {
+            SitemapController::flush();
         });
     }
 
@@ -254,6 +267,38 @@ class Site extends Model
     }
 
     /**
+     * Транслитерированный слаг названия для человекопонятного URL лота.
+     */
+    public function slug(): string
+    {
+        $slug = Str::slug((string) $this->title);
+
+        return $slug === '' ? 'site' : $slug;
+    }
+
+    /**
+     * Канонический путь страницы лота: /site/{id}-{slug}.
+     */
+    public function canonicalPath(): string
+    {
+        return '/site/'.$this->getKey().'-'.$this->slug();
+    }
+
+    /**
+     * Срок окупаемости в месяцах; null, если доход не указан.
+     */
+    public function paybackMonths(): ?int
+    {
+        $revenue = (float) $this->monthly_revenue;
+
+        if ($revenue <= 0) {
+            return null;
+        }
+
+        return (int) ceil((float) $this->price / $revenue);
+    }
+
+    /**
      * Пометка «требует продления»: подписка истекает в течение 7 дней или уже истекла.
      */
     public function needsRenewal(): bool
@@ -368,6 +413,8 @@ class Site extends Model
         $this->moderation_note = $note;
         $this->moderated_at = now();
         $this->save();
+
+        SiteModerationChanged::dispatch($this, $status, $note);
     }
 
     /**

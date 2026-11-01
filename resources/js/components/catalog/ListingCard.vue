@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { RouterLink } from 'vue-router';
 import { Globe } from '@lucide/vue';
 
 import { Badge } from '@/components/ui/badge';
@@ -43,7 +44,12 @@ const zoneLabel = computed(() =>
 
         <div class="min-w-0">
             <h3 class="line-clamp-2 text-[15px] leading-snug font-bold text-foreground">
-                {{ listing.title }}
+                <RouterLink
+                    :to="{ name: 'listing', params: { slug: listing.slug ?? listing.id } }"
+                    class="hover:text-primary hover:underline"
+                >
+                    {{ listing.title }}
+                </RouterLink>
             </h3>
 
             <div class="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">

@@ -2,6 +2,8 @@ import { mount } from '@vue/test-utils';
 
 import ListingList from '@/components/catalog/ListingList.vue';
 
+const STUBS = { RouterLink: { props: ['to'], template: '<a><slot /></a>' } };
+
 const ITEMS = [
     {
         id: 'lst_0001',
@@ -33,7 +35,7 @@ const ITEMS = [
 
 describe('ListingList', () => {
     it('показывает счётчик по items.length и total', () => {
-        const wrapper = mount(ListingList, { props: { items: ITEMS, total: 60 } });
+        const wrapper = mount(ListingList, { global: { stubs: STUBS }, props: { items: ITEMS, total: 60 } });
 
         expect(wrapper.text()).toContain('Показано');
         expect(wrapper.text()).toContain('2 из 60');
@@ -41,6 +43,7 @@ describe('ListingList', () => {
 
     it('выставляет aria-busy при загрузке', () => {
         const wrapper = mount(ListingList, {
+            global: { stubs: STUBS },
             props: { items: ITEMS, total: 60, loading: true },
         });
 
@@ -48,7 +51,7 @@ describe('ListingList', () => {
     });
 
     it('рендерит карточки по id', () => {
-        const wrapper = mount(ListingList, { props: { items: ITEMS, total: 60 } });
+        const wrapper = mount(ListingList, { global: { stubs: STUBS }, props: { items: ITEMS, total: 60 } });
 
         expect(wrapper.findAll('[data-slot="card"]')).toHaveLength(2);
         expect(wrapper.text()).toContain('Первый лот');
@@ -56,7 +59,7 @@ describe('ListingList', () => {
     });
 
     it('сохраняет контейнер catalog-list', () => {
-        const wrapper = mount(ListingList, { props: { items: ITEMS, total: 60 } });
+        const wrapper = mount(ListingList, { global: { stubs: STUBS }, props: { items: ITEMS, total: 60 } });
 
         expect(wrapper.find('#catalog-list').exists()).toBe(true);
     });

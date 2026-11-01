@@ -88,3 +88,15 @@ export async function fetchZones() {
 
     return Array.isArray(data?.items) ? data.items : [];
 }
+
+/**
+ * Публичная карточка лота по слагу `{id}-{slug}`.
+ *
+ * @param {string} slug
+ * @returns {Promise<object | null>}
+ */
+export async function fetchListing(slug) {
+    const data = await fetchJson(`/api/v1/listings/${encodeURIComponent(slug)}`);
+
+    return data?.data ?? null;
+}

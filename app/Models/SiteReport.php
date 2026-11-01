@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ReportReason;
 use App\Enums\ReportStatus;
+use App\Events\SiteReportResolved;
 use Database\Factories\SiteReportFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -62,5 +63,7 @@ class SiteReport extends Model
         $this->status = $status;
         $this->resolved_at = now();
         $this->save();
+
+        SiteReportResolved::dispatch($this, $status);
     }
 }

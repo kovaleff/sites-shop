@@ -25,6 +25,14 @@ const router = createRouter({
             meta: { navKey: 'pricing', title: 'Тарифы' },
         },
         {
+            // Страница лота: серверный HTML приходит с метатегами,
+            // SPA гидрирует разметку из window.__INITIAL_STATE__.
+            path: '/site/:slug',
+            name: 'listing',
+            component: () => import('@/views/ListingView.vue'),
+            meta: { navKey: 'catalog', title: 'Объявление', preserveTitle: true },
+        },
+        {
             path: '/cabinet',
             redirect: { name: 'cabinet-sites' },
         },
@@ -89,6 +97,16 @@ const router = createRouter({
             },
         },
         {
+            path: '/cabinet/settings/notifications',
+            name: 'cabinet-notification-settings',
+            component: () => import('@/views/cabinet/CabinetNotificationSettingsView.vue'),
+            meta: {
+                navKey: 'cabinet',
+                title: 'Уведомления',
+                requiresAuth: true,
+            },
+        },
+        {
             path: '/:pathMatch(.*)*',
             name: 'not-found',
             component: () => import('@/views/NotFoundView.vue'),
@@ -121,6 +139,12 @@ router.beforeEach(async (to) => {
 });
 
 router.afterEach((to) => {
+    // Страницу лота сервер отдаёт с готовым заголовком: перезапись сломала бы
+    // метатеги, которые уже прочитали поисковики и мессенджеры.
+    if (to.meta.preserveTitle) {
+        return;
+    }
+
     document.title = to.meta.title ? `${to.meta.title} — Sites-shop` : 'Sites-shop';
 });
 
