@@ -34,6 +34,12 @@ class PublicSiteResource extends JsonResource
             'isVerified' => (bool) $this->verified,
             'faviconUrl' => null,
             'categories' => CategoryResource::collection($this->whenLoaded('categories')),
+            'seller' => $this->whenLoaded('owner', fn (): ?array => $this->owner === null ? null : [
+                'id' => $this->owner->id,
+                'displayName' => $this->owner->name,
+                'avatarUrl' => $this->owner->avatar,
+                'profileUrl' => '/seller/'.$this->owner->id,
+            ]),
             'publishedAt' => $this->created_at?->toIso8601String(),
         ];
     }

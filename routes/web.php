@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\ListingController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\MySiteController;
 use App\Http\Controllers\Api\NotificationSettingsController;
+use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\SellerController;
 use App\Http\Controllers\Api\SessionController;
 use App\Http\Controllers\Api\SiteReportController;
 use App\Http\Controllers\Api\SiteStatusController;
@@ -17,6 +19,7 @@ use App\Http\Controllers\Api\VkAuthController;
 use App\Http\Controllers\Api\YandexAuthController;
 use App\Http\Controllers\ListingPageController;
 use App\Http\Controllers\NotificationUnsubscribeController;
+use App\Http\Controllers\SellerPageController;
 use App\Http\Controllers\SitemapController;
 use App\Support\Seo\SeoMeta;
 use Illuminate\Support\Facades\Route;
@@ -52,6 +55,11 @@ Route::get('/pricing', function () {
 Route::get('/site/{slug}', ListingPageController::class)
     ->where('slug', '[0-9]+(-[A-Za-z0-9-]+)?')
     ->name('listing');
+
+// Публичный профиль продавца: те же метатеги и гидратация SPA, что у лота.
+Route::get('/seller/{seller}', SellerPageController::class)
+    ->whereNumber('seller')
+    ->name('seller');
 
 // Карта сайта: маршрут вместо статического файла, чтобы список лотов был актуален.
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
@@ -120,8 +128,14 @@ Route::prefix('api/v1')->group(function () {
     Route::get('/listings/{slug}', [ListingController::class, 'show'])
         ->where('slug', '[0-9]+(-[A-Za-z0-9-]+)?')
         ->name('api.v1.listings.show');
+    Route::get('/sellers/{seller}', [SellerController::class, 'show'])
+        ->whereNumber('seller')
+        ->name('api.v1.sellers.show');
 
     Route::middleware('auth')->group(function () {
+        Route::get('/profile', [ProfileController::class, 'show'])->name('api.v1.profile.show');
+        Route::patch('/profile', [ProfileController::class, 'update'])->name('api.v1.profile.update');
+
         Route::get('/my/sites', [MySiteController::class, 'index'])->name('api.v1.my-sites.index');
         Route::post('/my/sites', [MySiteController::class, 'store'])
             ->middleware('throttle:create-site')

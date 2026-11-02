@@ -117,4 +117,30 @@ describe('ListingCard', () => {
         expect(wrapper.emitted('contact')).toHaveLength(1);
         expect(wrapper.emitted('contact')[0][0]).toMatchObject({ id: listing.id });
     });
+
+    it('показывает ссылку на профиль продавца', () => {
+        const wrapper = mountCard(
+            createListing({
+                seller: {
+                    id: 7,
+                    displayName: 'Иван Петров',
+                    avatarUrl: null,
+                    profileUrl: '/seller/7',
+                },
+            }),
+        );
+
+        const link = wrapper
+            .findAll('a')
+            .find((element) => element.text().includes('Иван Петров'));
+
+        expect(link).toBeTruthy();
+        expect(link.attributes('data-to')).toContain('/seller/7');
+    });
+
+    it('не показывает блок продавца, если данных нет', () => {
+        const wrapper = mountCard(createListing());
+
+        expect(wrapper.text()).not.toContain('Иван Петров');
+    });
 });

@@ -3,6 +3,7 @@
 namespace App\Support\Seo;
 
 use App\Models\Site;
+use App\Models\User;
 use Illuminate\Support\Str;
 
 /**
@@ -80,6 +81,32 @@ final class SeoMeta
     }
 
     /**
+     * Публичный профиль продавца: метатеги и разметка Person.
+     */
+    public static function forSeller(User $seller, int $publishedCount = 0): self
+    {
+        $bio = trim((string) $seller->bio);
+        $description = $bio !== ''
+            ? $bio
+            : sprintf(
+                'Профиль продавца %s на %s: опубликованных лотов — %d.',
+                $seller->name,
+                self::SITE_NAME,
+                $publishedCount,
+            );
+        $image = self::absoluteImage($seller->avatar);
+
+        return new self(
+            title: $seller->name.' — продавец на '.self::SITE_NAME,
+            description: $description,
+            canonical: url('/seller/'.$seller->getKey()),
+            image: $image,
+            type: 'profile',
+            jsonLd: self::sellerJsonLd($seller, $description, $image),
+        );
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function toArray(): array
@@ -144,6 +171,35 @@ final class SeoMeta
         }
 
         return $data;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function sellerJsonLd(User $seller, string $description, ?string $imageUrl): array
+    {
+        $data = [
+            '@context' => 'https://schema.org',
+            '@type' => 'Person',
+            'name' => $seller->name,
+            'description' => self::clip($description),
+            'url' => url('/seller/'.$seller->getKey()),
+        ];
+
+        if ($imageUrl !== null) {
+            $data['image'] = $imageUrl;
+        }
+
+        return $data;
+    }
+
+    private static function absoluteImage(?string $url): ?string
+    {
+        if ($url === null || trim($url) === '') {
+            return null;
+        }
+
+        return Str::startsWith($url, ['http://', 'https://']) ? $url : url($url);
     }
 
     private static function money(float $amount): string

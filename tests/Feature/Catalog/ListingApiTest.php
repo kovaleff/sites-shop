@@ -4,6 +4,7 @@ namespace Tests\Feature\Catalog;
 
 use App\Models\Category;
 use App\Models\Site;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -32,6 +33,20 @@ class ListingApiTest extends TestCase
             ->assertJsonPath('data.url', $site->canonicalPath())
             ->assertJsonPath('data.title', 'Каталог мебели')
             ->assertJsonPath('data.categories.0.name', 'Мебель, интерьер и быт');
+    }
+
+    public function test_listing_exposes_seller_profile_link(): void
+    {
+        $seller = User::factory()->create(['name' => 'Иван Петров']);
+        $site = Site::factory()->paid()->create([
+            'user_id' => $seller->id,
+        ]);
+
+        $this->getJson('/api/v1/listings/'.$site->id.'-'.$site->slug())
+            ->assertOk()
+            ->assertJsonPath('data.seller.id', $seller->id)
+            ->assertJsonPath('data.seller.displayName', 'Иван Петров')
+            ->assertJsonPath('data.seller.profileUrl', '/seller/'.$seller->id);
     }
 
     public function test_listing_exposes_payback_months(): void

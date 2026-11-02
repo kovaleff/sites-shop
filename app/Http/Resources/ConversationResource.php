@@ -37,6 +37,9 @@ class ConversationResource extends JsonResource
                 'id' => $counterparty?->id,
                 'displayName' => $counterparty?->name,
                 'avatarUrl' => $counterparty?->avatar,
+                'profileUrl' => $isBuyer && $counterparty !== null
+                    ? '/seller/'.$counterparty->id
+                    : null,
             ],
             'lastMessage' => $lastMessage === null ? null : [
                 'body' => $lastMessage->body,

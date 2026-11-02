@@ -36,6 +36,8 @@ class User extends Authenticatable
         'password',
         'permissions',
         'avatar',
+        'bio',
+        'city',
         'vk_id',
         'ya_id',
         'vk_last_login_at',

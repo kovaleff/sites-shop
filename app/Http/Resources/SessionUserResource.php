@@ -12,7 +12,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class SessionUserResource extends JsonResource
 {
     /**
-     * @return array{id: int, displayName: string, email: string|null, avatarUrl: string|null, provider: string|null}
+     * @return array{id: int, displayName: string, email: string|null, avatarUrl: string|null, bio: string|null, city: string|null, profileUrl: string, provider: string|null}
      */
     public function toArray(Request $request): array
     {
@@ -21,6 +21,9 @@ class SessionUserResource extends JsonResource
             'displayName' => $this->name,
             'email' => $this->email,
             'avatarUrl' => $this->avatar,
+            'bio' => $this->bio,
+            'city' => $this->city,
+            'profileUrl' => '/seller/'.$this->getKey(),
             'provider' => $this->provider(),
         ];
     }

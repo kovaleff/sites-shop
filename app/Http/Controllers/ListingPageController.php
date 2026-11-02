@@ -31,7 +31,7 @@ class ListingPageController extends Controller
 
         $site = Site::query()
             ->publiclyVisible()
-            ->with('categories')
+            ->with(['categories', 'owner'])
             ->findOrFail($siteId);
 
         // Слаг в URL не совпадает с названием — постоянный редирект на канонический адрес.

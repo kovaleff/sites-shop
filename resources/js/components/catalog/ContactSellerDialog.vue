@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
+import { RouterLink } from 'vue-router';
 import { toast } from 'vue-sonner';
 
 import { Button } from '@/components/ui/button';
@@ -102,6 +103,14 @@ async function submit() {
                     {{ listing.title }} · {{ listing.domain }}
                 </DialogDescription>
             </DialogHeader>
+
+            <RouterLink
+                v-if="listing?.seller"
+                :to="listing.seller.profileUrl ?? `/seller/${listing.seller.id}`"
+                class="text-xs text-muted-foreground hover:text-primary hover:underline"
+            >
+                Профиль продавца: {{ listing.seller.displayName }}
+            </RouterLink>
 
             <div v-if="!session.isAuthenticated" class="flex flex-col gap-3">
                 <p class="text-sm text-muted-foreground">

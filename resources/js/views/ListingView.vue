@@ -25,6 +25,9 @@ const isReportOpen = ref(false);
 const isLoading = computed(() => status.value === 'loading');
 const isError = computed(() => status.value === 'error');
 const categories = computed(() => listing.value?.categories ?? []);
+const sellerInitial = computed(
+    () => (listing.value?.seller?.displayName?.charAt(0) || '?').toUpperCase(),
+);
 
 /**
  * Гидратация из серверного состояния: страница отрисована без запроса к API.
@@ -151,6 +154,43 @@ onMounted(async () => {
                 </Card>
 
                 <div class="flex flex-col gap-3">
+                    <Card
+                        v-if="listing.seller"
+                        class="flex flex-col gap-2 border-border bg-card p-5"
+                    >
+                        <span class="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                            Продавец
+                        </span>
+
+                        <RouterLink
+                            :to="listing.seller.profileUrl ?? `/seller/${listing.seller.id}`"
+                            class="flex items-center gap-2.5 rounded-lg outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                            <span
+                                class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-secondary text-sm font-extrabold text-primary"
+                            >
+                                <img
+                                    v-if="listing.seller.avatarUrl"
+                                    :src="listing.seller.avatarUrl"
+                                    :alt="listing.seller.displayName"
+                                    class="size-full object-cover"
+                                />
+                                <span v-else aria-hidden="true">{{ sellerInitial }}</span>
+                            </span>
+
+                            <span class="min-w-0 truncate text-sm font-semibold">
+                                {{ listing.seller.displayName }}
+                            </span>
+                        </RouterLink>
+
+                        <RouterLink
+                            :to="listing.seller.profileUrl ?? `/seller/${listing.seller.id}`"
+                            class="text-xs text-muted-foreground hover:text-primary hover:underline"
+                        >
+                            Все лоты продавца
+                        </RouterLink>
+                    </Card>
+
                     <Card class="flex flex-col gap-3 border-border bg-card p-5">
                         <div>
                             <span class="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">

@@ -84,3 +84,34 @@ export function applyListingMeta(listing) {
     setMetaByProperty('og:url', canonical);
     setCanonical(canonical);
 }
+
+/**
+ * Метатеги публичного профиля продавца при клиентской навигации.
+ *
+ * @param {object} seller
+ * @returns {void}
+ */
+export function applySellerMeta(seller) {
+    if (!seller) {
+        return;
+    }
+
+    const title = `${seller.displayName} — продавец на Sites-shop`;
+    const description =
+        seller.bio
+        || `Профиль продавца ${seller.displayName}: опубликованных лотов — ${seller.publishedSitesCount ?? 0}.`;
+    const canonical = new URL(
+        seller.profileUrl ?? `/seller/${seller.id}`,
+        window.location.origin,
+    ).href;
+
+    document.title = title;
+
+    setMetaByName('description', description);
+    setMetaByName('twitter:title', title);
+    setMetaByName('twitter:description', description);
+    setMetaByProperty('og:title', title);
+    setMetaByProperty('og:description', description);
+    setMetaByProperty('og:url', canonical);
+    setCanonical(canonical);
+}

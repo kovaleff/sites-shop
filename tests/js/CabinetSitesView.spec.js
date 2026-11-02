@@ -30,6 +30,7 @@ const ROUTES = [
     { path: '/cabinet/hidden', name: 'cabinet-hidden', component: { template: '<div />' } },
     { path: '/cabinet/messages', name: 'cabinet-messages', component: { template: '<div />' } },
     { path: '/cabinet/messages/:id', name: 'cabinet-conversation', component: { template: '<div />' } },
+    { path: '/cabinet/profile', name: 'cabinet-profile', component: { template: '<div />' } },
     {
         path: '/cabinet/settings/notifications',
         name: 'cabinet-notification-settings',

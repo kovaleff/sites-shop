@@ -33,6 +33,14 @@ const router = createRouter({
             meta: { navKey: 'catalog', title: 'Объявление', preserveTitle: true },
         },
         {
+            // Публичный профиль продавца: те же серверные метатеги,
+            // что и у лота, поэтому заголовок не перезаписывается роутером.
+            path: '/seller/:id',
+            name: 'seller',
+            component: () => import('@/views/SellerView.vue'),
+            meta: { navKey: 'catalog', title: 'Продавец', preserveTitle: true },
+        },
+        {
             path: '/cabinet',
             redirect: { name: 'cabinet-sites' },
         },
@@ -103,6 +111,16 @@ const router = createRouter({
             meta: {
                 navKey: 'cabinet',
                 title: 'Уведомления',
+                requiresAuth: true,
+            },
+        },
+        {
+            path: '/cabinet/profile',
+            name: 'cabinet-profile',
+            component: () => import('@/views/cabinet/CabinetProfileView.vue'),
+            meta: {
+                navKey: 'cabinet',
+                title: 'Профиль продавца',
                 requiresAuth: true,
             },
         },

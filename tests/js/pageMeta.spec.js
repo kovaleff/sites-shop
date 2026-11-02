@@ -1,4 +1,4 @@
-import { applyListingMeta } from '@/lib/pageMeta';
+import { applyListingMeta, applySellerMeta } from '@/lib/pageMeta';
 
 /**
  * @param {string} name
@@ -58,6 +58,35 @@ describe('pageMeta', () => {
 
     it('ничего не делает без объявления', () => {
         applyListingMeta(null);
+
+        expect(document.title).toBe('');
+    });
+
+    it('обновляет метатеги профиля продавца', () => {
+        applySellerMeta({
+            id: 7,
+            displayName: 'Иван Петров',
+            bio: 'Продаю сайты с 2015 года.',
+            publishedSitesCount: 3,
+            profileUrl: '/seller/7',
+        });
+
+        expect(document.title).toContain('Иван Петров');
+        expect(metaContent('description')).toBe('Продаю сайты с 2015 года.');
+        expect(propertyContent('og:url')).toBe(`${window.location.origin}/seller/7`);
+    });
+
+    it('собирает описание продавца без bio', () => {
+        applySellerMeta({ id: 7, displayName: 'Иван Петров', publishedSitesCount: 3 });
+
+        expect(metaContent('description')).toContain('опубликованных лотов — 3');
+        expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
+            `${window.location.origin}/seller/7`,
+        );
+    });
+
+    it('ничего не делает без продавца', () => {
+        applySellerMeta(null);
 
         expect(document.title).toBe('');
     });

@@ -25,7 +25,7 @@ class ListingController extends Controller
 
         $site = Site::query()
             ->publiclyVisible()
-            ->with('categories')
+            ->with(['categories', 'owner'])
             ->findOrFail($siteId);
 
         return response()->json([

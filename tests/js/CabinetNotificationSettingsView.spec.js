@@ -47,6 +47,7 @@ const ROUTES = [
     { path: '/cabinet/sites', name: 'cabinet-sites', component: { template: '<div />' } },
     { path: '/cabinet/hidden', name: 'cabinet-hidden', component: { template: '<div />' } },
     { path: '/cabinet/messages', name: 'cabinet-messages', component: { template: '<div />' } },
+    { path: '/cabinet/profile', name: 'cabinet-profile', component: { template: '<div />' } },
     {
         path: '/cabinet/settings/notifications',
         name: 'cabinet-notification-settings',

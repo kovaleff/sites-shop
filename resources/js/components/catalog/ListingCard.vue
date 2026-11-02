@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
-import { Globe } from '@lucide/vue';
+import { Globe, Store } from '@lucide/vue';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -57,6 +57,19 @@ const zoneLabel = computed(() =>
                 <span class="truncate" :title="listing.domain">{{ listing.domain }}</span>
                 <span aria-hidden="true">·</span>
                 <span class="shrink-0">{{ zoneLabel }}</span>
+            </div>
+
+            <div
+                v-if="listing.seller"
+                class="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground"
+            >
+                <Store class="size-3.5 shrink-0" aria-hidden="true" />
+                <RouterLink
+                    :to="listing.seller.profileUrl ?? `/seller/${listing.seller.id}`"
+                    class="truncate hover:text-primary hover:underline"
+                >
+                    {{ listing.seller.displayName }}
+                </RouterLink>
             </div>
 
             <p class="mt-1 line-clamp-2 min-h-[2.6em] text-xs text-muted-foreground">

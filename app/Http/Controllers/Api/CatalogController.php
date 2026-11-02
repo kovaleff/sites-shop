@@ -36,6 +36,7 @@ class CatalogController extends Controller
 
         $sites = Site::query()
             ->publiclyVisible()
+            ->with('owner')
             ->when($priceMin > 0, fn ($query) => $query->where('price', '>=', $priceMin))
             ->when($priceMax < 10_000_000, fn ($query) => $query->where('price', '<=', $priceMax))
             ->when($incomeMin > 0, fn ($query) => $query->where('monthly_revenue', '>=', $incomeMin))

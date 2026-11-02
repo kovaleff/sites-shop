@@ -11,6 +11,9 @@ export const VK_VERIFIER_COOKIE = 'vk_code_verifier';
  * @property {string} displayName
  * @property {string | null} email
  * @property {string | null} avatarUrl
+ * @property {string | null} bio
+ * @property {string | null} city
+ * @property {string | null} profileUrl
  * @property {'vk' | 'yandex' | null} provider
  */
 
@@ -49,6 +52,9 @@ function normalizeSession(payload) {
             displayName: user.displayName ?? 'Покупатель',
             email: user.email ?? null,
             avatarUrl: user.avatarUrl ?? null,
+            bio: user.bio ?? null,
+            city: user.city ?? null,
+            profileUrl: user.profileUrl ?? null,
             provider: user.provider ?? null,
         },
     };

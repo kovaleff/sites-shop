@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, watch } from 'vue';
 import { storeToRefs } from 'pinia';
-import { useRoute } from 'vue-router';
+import { useRoute, RouterLink } from 'vue-router';
 import { toast } from 'vue-sonner';
 import { ArrowLeft } from '@lucide/vue';
 
@@ -55,6 +55,14 @@ async function send(body) {
             <span v-if="current" class="text-sm text-muted-foreground">
                 {{ current.site?.title }} · {{ current.site?.domain }}
             </span>
+
+            <RouterLink
+                v-if="current?.counterparty?.profileUrl"
+                :to="current.counterparty.profileUrl"
+                class="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+            >
+                {{ current.counterparty.displayName }}
+            </RouterLink>
         </div>
 
         <Skeleton v-if="isLoading" class="h-72 w-full rounded-xl" />
