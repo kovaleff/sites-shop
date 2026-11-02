@@ -4,11 +4,13 @@ use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ConfigController;
 use App\Http\Controllers\Api\ConversationController;
+use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\ListingController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\MySiteController;
 use App\Http\Controllers\Api\NotificationSettingsController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\SavedSearchController;
 use App\Http\Controllers\Api\SellerController;
 use App\Http\Controllers\Api\SessionController;
 use App\Http\Controllers\Api\SiteReportController;
@@ -156,6 +158,24 @@ Route::prefix('api/v1')->group(function () {
             ->name('api.v1.notification-settings.index');
         Route::patch('/notification-settings', [NotificationSettingsController::class, 'update'])
             ->name('api.v1.notification-settings.update');
+
+        Route::get('/favorites/ids', [FavoriteController::class, 'ids'])->name('api.v1.favorites.ids');
+        Route::get('/favorites', [FavoriteController::class, 'index'])->name('api.v1.favorites.index');
+        Route::post('/favorites/{site}', [FavoriteController::class, 'store'])
+            ->whereNumber('site')
+            ->name('api.v1.favorites.store');
+        Route::delete('/favorites/{site}', [FavoriteController::class, 'destroy'])
+            ->whereNumber('site')
+            ->name('api.v1.favorites.destroy');
+
+        Route::get('/saved-searches', [SavedSearchController::class, 'index'])->name('api.v1.saved-searches.index');
+        Route::post('/saved-searches', [SavedSearchController::class, 'store'])->name('api.v1.saved-searches.store');
+        Route::patch('/saved-searches/{savedSearch}', [SavedSearchController::class, 'update'])
+            ->whereNumber('savedSearch')
+            ->name('api.v1.saved-searches.update');
+        Route::delete('/saved-searches/{savedSearch}', [SavedSearchController::class, 'destroy'])
+            ->whereNumber('savedSearch')
+            ->name('api.v1.saved-searches.destroy');
 
         Route::post('/sites/{site}/reports', [SiteReportController::class, 'store'])
             ->middleware('throttle:5,1')

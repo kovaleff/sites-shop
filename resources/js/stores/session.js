@@ -8,6 +8,7 @@ import {
     startYandexLogin,
 } from '@/services/sessionService';
 import { fetchUnreadCount } from '@/services/conversationService';
+import { useFavoritesStore } from '@/stores/favorites';
 
 export const useSessionStore = defineStore('session', {
     state: () => ({
@@ -79,6 +80,7 @@ export const useSessionStore = defineStore('session', {
             this.user = null;
             this.isAuthenticated = false;
             this.unreadMessages = 0;
+            useFavoritesStore().reset();
         },
 
         /**
@@ -141,6 +143,7 @@ export const useSessionStore = defineStore('session', {
             this.authError = null;
             this.unreadMessages = 0;
             this.csrfToken = null;
+            useFavoritesStore().reset();
         },
     },
 });

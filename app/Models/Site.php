@@ -4,8 +4,10 @@ namespace App\Models;
 
 use App\Enums\ListingStatus;
 use App\Enums\ModerationStatus;
+use App\Enums\NotificationType;
 use App\Events\SiteModerationChanged;
 use App\Http\Controllers\SitemapController;
+use App\Notifications\FavoriteSiteChanged;
 use App\Services\Seo\ListingImageGenerator;
 use Carbon\CarbonImmutable;
 use Database\Factories\SiteFactory;
@@ -90,6 +92,19 @@ class Site extends Model
         static::saved(function (Site $site): void {
             SitemapController::flush();
             app(ListingImageGenerator::class)->forget($site);
+        });
+
+        // Покупатель, добавивший лот в избранное, узнаёт о продаже или смене цены.
+        static::updated(function (Site $site): void {
+            if ($site->wasChanged('status') && $site->status === ListingStatus::Sold) {
+                $site->notifyFavoriteWatchers('sold');
+
+                return;
+            }
+
+            if ($site->wasChanged('price') && $site->isPubliclyVisible()) {
+                $site->notifyFavoriteWatchers('price', (float) $site->getOriginal('price'));
+            }
         });
 
         static::deleted(function (): void {
@@ -179,6 +194,20 @@ class Site extends Model
         return $this->hasMany(SiteReport::class);
     }
 
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(Favorite::class);
+    }
+
+    /**
+     * Пользователи, добавившие лот в избранное.
+     */
+    public function favoriteUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'favorites')
+            ->withTimestamps();
+    }
+
     #[Scope]
     protected function publiclyVisible(Builder $query): void
     {
@@ -264,6 +293,23 @@ class Site extends Model
     public function isOwnedBy(User $user): bool
     {
         return $this->user_id === $user->id;
+    }
+
+    /**
+     * Письма пользователям, которые добавили лот в избранное.
+     */
+    public function notifyFavoriteWatchers(string $change, ?float $oldPrice = null): void
+    {
+        $this->favoriteUsers()
+            ->whereKeyNot($this->user_id)
+            ->get()
+            ->each(function (User $user) use ($change, $oldPrice): void {
+                if (! $user->wantsNotification(NotificationType::Favorites)) {
+                    return;
+                }
+
+                $user->notify(new FavoriteSiteChanged($this, $change, $oldPrice));
+            });
     }
 
     /**

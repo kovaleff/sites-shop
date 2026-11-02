@@ -19,7 +19,7 @@ class SellerPageController extends Controller
 
     public function __invoke(Request $request, int $seller): View
     {
-        [$profile, $listings] = $this->profiles->load($seller);
+        [$profile, $listings] = $this->profiles->load($seller, 1, $request->user());
 
         return view('app', [
             'meta' => SeoMeta::forSeller(

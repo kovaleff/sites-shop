@@ -6,12 +6,14 @@ import { toast } from 'vue-sonner';
 import App from '@/App.vue';
 import router from '@/router';
 import { setUnauthorizedHandler } from '@/services/http';
+import { useFavoritesStore } from '@/stores/favorites';
 import { useSessionStore } from '@/stores/session';
 
 const pinia = createPinia();
 const app = createApp(App).use(pinia).use(router);
 
 const session = useSessionStore(pinia);
+const favorites = useFavoritesStore(pinia);
 
 setUnauthorizedHandler(() => {
     session.handleUnauthorized();
@@ -40,6 +42,12 @@ watch(
     },
 );
 
-session.initialize().finally(() => {
-    app.mount('#app');
-});
+session.initialize()
+    .then(async () => {
+        if (session.isAuthenticated) {
+            await favorites.ensureLoaded().catch(() => {});
+        }
+    })
+    .finally(() => {
+        app.mount('#app');
+    });

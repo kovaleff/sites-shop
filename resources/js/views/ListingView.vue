@@ -1,9 +1,11 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
+import { toast } from 'vue-sonner';
 import { ArrowLeft, BadgeCheck, Globe, TrendingUp } from '@lucide/vue';
 
 import ContactSellerDialog from '@/components/catalog/ContactSellerDialog.vue';
+import FavoriteButton from '@/components/catalog/FavoriteButton.vue';
 import ReportListingDialog from '@/components/catalog/ReportListingDialog.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,14 +15,19 @@ import { consumeInitialState } from '@/lib/initialState';
 import { applyListingMeta } from '@/lib/pageMeta';
 import { formatDate, formatRub, formatRubMonthly } from '@/lib/format';
 import { fetchListing } from '@/services/catalogService';
+import { useFavoritesStore } from '@/stores/favorites';
+import { useSessionStore } from '@/stores/session';
 
 const route = useRoute();
+const favorites = useFavoritesStore();
+const session = useSessionStore();
 
 const listing = ref(null);
 const status = ref('loading');
 const error = ref('');
 const isContactOpen = ref(false);
 const isReportOpen = ref(false);
+const favoriteBusy = ref(false);
 
 const isLoading = computed(() => status.value === 'loading');
 const isError = computed(() => status.value === 'error');
@@ -28,6 +35,36 @@ const categories = computed(() => listing.value?.categories ?? []);
 const sellerInitial = computed(
     () => (listing.value?.seller?.displayName?.charAt(0) || '?').toUpperCase(),
 );
+const isFavorite = computed(() =>
+    listing.value ? favorites.isFavorite(listing.value.id) : false,
+);
+
+/**
+ * @returns {Promise<void>}
+ */
+async function toggleFavorite() {
+    if (!listing.value) {
+        return;
+    }
+
+    if (!session.isAuthenticated) {
+        toast.error('Войдите, чтобы добавить лот в избранное');
+
+        return;
+    }
+
+    favoriteBusy.value = true;
+
+    try {
+        const added = await favorites.toggle(listing.value.id);
+
+        toast.success(added ? 'Лот добавлен в избранное' : 'Лот убран из избранного');
+    } catch (requestError) {
+        toast.error(requestError?.message ?? 'Не удалось обновить избранное');
+    } finally {
+        favoriteBusy.value = false;
+    }
+}
 
 /**
  * Гидратация из серверного состояния: страница отрисована без запроса к API.
@@ -36,6 +73,10 @@ const sellerInitial = computed(
  * @returns {Promise<void>}
  */
 onMounted(async () => {
+    if (session.isAuthenticated) {
+        favorites.ensureLoaded().catch(() => {});
+    }
+
     const slug = String(route.params.slug ?? '');
     const hydrated = consumeInitialState('listing');
 
@@ -127,7 +168,12 @@ onMounted(async () => {
                     </div>
                 </div>
 
-                <div class="flex flex-wrap gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    <FavoriteButton
+                        :is-favorite="isFavorite"
+                        :busy="favoriteBusy"
+                        @toggle="toggleFavorite"
+                    />
                     <Button type="button" @click="isContactOpen = true">Связаться с продавцом</Button>
                     <Button type="button" variant="ghost" @click="isReportOpen = true">
                         Пожаловаться

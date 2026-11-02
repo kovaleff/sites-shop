@@ -12,6 +12,8 @@ enum NotificationType: string
     case Moderation = 'moderation';
     case Subscription = 'subscription';
     case Reports = 'reports';
+    case Favorites = 'favorites';
+    case SavedSearches = 'saved_searches';
 
     public function label(): string
     {
@@ -20,6 +22,8 @@ enum NotificationType: string
             self::Moderation => 'Решения модерации',
             self::Subscription => 'Истечение подписки',
             self::Reports => 'Жалобы на объявления',
+            self::Favorites => 'Избранные лоты',
+            self::SavedSearches => 'Новые лоты по фильтру',
         };
     }
 
@@ -30,6 +34,8 @@ enum NotificationType: string
             self::Moderation => 'Письмо, когда объявление одобрено или отклонено модератором.',
             self::Subscription => 'Напоминания за 7 и 1 день до окончания оплаченного периода.',
             self::Reports => 'Письмо, когда жалоба на ваше объявление рассмотрена.',
+            self::Favorites => 'Изменение цены или продажа лота, который вы добавили в избранное.',
+            self::SavedSearches => 'Дайджест новых лотов, подходящих под сохранённый фильтр.',
         };
     }
 

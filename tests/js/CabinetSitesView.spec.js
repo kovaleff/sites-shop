@@ -28,6 +28,8 @@ const ROUTES = [
     { path: '/cabinet/sites/new', name: 'cabinet-site-create', component: { template: '<div />' } },
     { path: '/cabinet/sites/:id/edit', name: 'cabinet-site-edit', component: { template: '<div />' } },
     { path: '/cabinet/hidden', name: 'cabinet-hidden', component: { template: '<div />' } },
+    { path: '/cabinet/favorites', name: 'cabinet-favorites', component: { template: '<div />' } },
+    { path: '/cabinet/searches', name: 'cabinet-saved-searches', component: { template: '<div />' } },
     { path: '/cabinet/messages', name: 'cabinet-messages', component: { template: '<div />' } },
     { path: '/cabinet/messages/:id', name: 'cabinet-conversation', component: { template: '<div />' } },
     { path: '/cabinet/profile', name: 'cabinet-profile', component: { template: '<div />' } },

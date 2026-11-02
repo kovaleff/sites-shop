@@ -17,7 +17,7 @@ final class SellerProfileService
     /**
      * @return array{0: User, 1: LengthAwarePaginator<int, Site>}
      */
-    public function load(int $sellerId, int $page = 1): array
+    public function load(int $sellerId, int $page = 1, ?User $viewer = null): array
     {
         $seller = User::query()->findOrFail($sellerId);
 
@@ -30,6 +30,9 @@ final class SellerProfileService
         $listings = $seller->sites()
             ->publiclyVisible()
             ->with(['categories', 'owner'])
+            ->when($viewer !== null, fn (Builder $query) => $query->withExists([
+                'favorites as is_favorite' => fn (Builder $favoritesQuery) => $favoritesQuery->where('user_id', $viewer->id),
+            ]))
             ->latest('created_at')
             ->latest('id')
             ->paginate(Site::CATALOG_PER_PAGE, ['*'], 'page', max(1, $page));

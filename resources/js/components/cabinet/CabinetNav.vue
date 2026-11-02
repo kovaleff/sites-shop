@@ -1,9 +1,11 @@
 <script setup>
 import { RouterLink } from 'vue-router';
-import { FolderOpen, MessageSquare, Archive, Bell, UserRound } from '@lucide/vue';
+import { FolderOpen, MessageSquare, Archive, Bell, UserRound, Heart, Bookmark } from '@lucide/vue';
 
 const items = [
     { name: 'cabinet-sites', label: 'Мои объявления', icon: FolderOpen },
+    { name: 'cabinet-favorites', label: 'Избранное', icon: Heart },
+    { name: 'cabinet-saved-searches', label: 'Подписки', icon: Bookmark },
     { name: 'cabinet-messages', label: 'Сообщения', icon: MessageSquare },
     { name: 'cabinet-hidden', label: 'Скрытые', icon: Archive },
     { name: 'cabinet-profile', label: 'Профиль', icon: UserRound },

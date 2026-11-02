@@ -16,7 +16,7 @@ class SellerController extends Controller
      */
     public function show(Request $request, SellerProfileService $profiles, int $seller): JsonResponse
     {
-        [$profile, $listings] = $profiles->load($seller, (int) $request->query('page', 1));
+        [$profile, $listings] = $profiles->load($seller, (int) $request->query('page', 1), $request->user());
 
         return response()->json([
             'data' => (new PublicSellerResource($profile))->resolve($request),

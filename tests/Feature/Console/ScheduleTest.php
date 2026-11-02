@@ -24,6 +24,7 @@ class ScheduleTest extends TestCase
             'sites:recheck-domains',
             'sitemap:generate',
             'reports:digest',
+            'saved-searches:notify',
         ] as $command) {
             $this->assertStringContainsString($command, $output);
         }

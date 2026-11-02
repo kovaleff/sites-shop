@@ -276,6 +276,39 @@ export function parseFiltersFromQuery(query, availableZones, availableCategories
 }
 
 /**
+ * Полный набор фильтров для API сохранённого поиска: в отличие от query-строки
+ * здесь передаются и значения по умолчанию, чтобы фильтр был воспроизводим.
+ *
+ * @param {ReturnType<typeof createDefaultFilters>} filters
+ * @returns {{
+ *   price_min: number,
+ *   price_max: number,
+ *   income_min: number,
+ *   income_max: number,
+ *   zones: string[],
+ *   categories: string[],
+ *   verified: boolean,
+ *   q: string | null,
+ *   sort: string,
+ * }}
+ */
+export function serializeFiltersToPayload(filters) {
+    const normalized = normalizeFilters(filters, filters.zones, filters.categories);
+
+    return {
+        price_min: normalized.priceMin,
+        price_max: normalized.priceMax,
+        income_min: normalized.incomeMin,
+        income_max: normalized.incomeMax,
+        zones: normalized.zones,
+        categories: normalized.categories,
+        verified: normalized.verifiedOnly,
+        q: normalized.search === '' ? null : normalized.search,
+        sort: normalized.sort,
+    };
+}
+
+/**
  * @param {ReturnType<typeof createDefaultFilters>} filters
  * @param {number} [page]
  * @returns {Record<string, string>}

@@ -24,7 +24,7 @@ class NotificationSettingsTest extends TestCase
         $this->actingAs($user)
             ->getJson('/api/v1/notification-settings')
             ->assertOk()
-            ->assertJsonCount(4, 'data')
+            ->assertJsonCount(6, 'data')
             ->assertJsonPath('data.0.value', NotificationType::Messages->value)
             ->assertJsonPath('data.0.enabled', true)
             ->assertJsonPath('data.3.value', NotificationType::Reports->value)

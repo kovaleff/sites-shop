@@ -19,3 +19,6 @@ Schedule::command('sites:recheck-domains')->weeklyOn(1, '03:00')->withoutOverlap
 // Карта сайта и утренняя сводка жалоб модераторам.
 Schedule::command('sitemap:generate')->dailyAt('04:00')->withoutOverlapping();
 Schedule::command('reports:digest')->dailyAt('09:00')->withoutOverlapping();
+
+// Дайджест новых лотов по сохранённым фильтрам покупателей.
+Schedule::command('saved-searches:notify')->dailyAt('10:00')->withoutOverlapping();

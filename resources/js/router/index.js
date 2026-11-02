@@ -85,6 +85,26 @@ const router = createRouter({
             },
         },
         {
+            path: '/cabinet/favorites',
+            name: 'cabinet-favorites',
+            component: () => import('@/views/cabinet/CabinetFavoritesView.vue'),
+            meta: {
+                navKey: 'cabinet',
+                title: 'Избранное',
+                requiresAuth: true,
+            },
+        },
+        {
+            path: '/cabinet/searches',
+            name: 'cabinet-saved-searches',
+            component: () => import('@/views/cabinet/CabinetSavedSearchesView.vue'),
+            meta: {
+                navKey: 'cabinet',
+                title: 'Подписки на фильтры',
+                requiresAuth: true,
+            },
+        },
+        {
             path: '/cabinet/messages',
             name: 'cabinet-messages',
             component: () => import('@/views/cabinet/CabinetMessagesView.vue'),

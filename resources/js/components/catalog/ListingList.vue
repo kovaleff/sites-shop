@@ -2,13 +2,23 @@
 import ListingCard from '@/components/catalog/ListingCard.vue';
 import { formatCount } from '@/lib/format';
 
-defineProps({
+const props = defineProps({
     items: { type: Array, default: () => [] },
     total: { type: Number, default: 0 },
     loading: { type: Boolean, default: false },
+    favoriteIds: { type: Array, default: () => [] },
+    favoriteBusyId: { type: Number, default: null },
 });
 
-defineEmits(['contact', 'report']);
+defineEmits(['contact', 'report', 'favorite']);
+
+/**
+ * @param {object} listing
+ * @returns {boolean}
+ */
+function isFavorite(listing) {
+    return props.favoriteIds.map(Number).includes(Number(listing.id));
+}
 </script>
 
 <template>
@@ -28,8 +38,11 @@ defineEmits(['contact', 'report']);
                 v-for="listing in items"
                 :key="listing.id"
                 :listing="listing"
+                :is-favorite="isFavorite(listing)"
+                :favorite-busy="favoriteBusyId === Number(listing.id)"
                 @contact="$emit('contact', $event)"
                 @report="$emit('report', $event)"
+                @favorite="$emit('favorite', $event)"
             />
         </div>
     </div>

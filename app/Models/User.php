@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\NotificationType;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Orchid\Filters\Types\Like;
@@ -114,6 +115,22 @@ class User extends Authenticatable
     public function subscriptionPayments(): HasMany
     {
         return $this->hasMany(SubscriptionPayment::class);
+    }
+
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(Favorite::class);
+    }
+
+    public function favoriteSites(): BelongsToMany
+    {
+        return $this->belongsToMany(Site::class, 'favorites')
+            ->withTimestamps();
+    }
+
+    public function savedSearches(): HasMany
+    {
+        return $this->hasMany(SavedSearch::class);
     }
 
     /**

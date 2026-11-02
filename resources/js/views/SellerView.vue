@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
+import { toast } from 'vue-sonner';
 import {
     ArrowLeft,
     BadgeCheck,
@@ -22,8 +23,12 @@ import { consumeInitialState } from '@/lib/initialState';
 import { applySellerMeta } from '@/lib/pageMeta';
 import { formatCount, formatDate } from '@/lib/format';
 import { fetchSeller } from '@/services/sellerService';
+import { useFavoritesStore } from '@/stores/favorites';
+import { useSessionStore } from '@/stores/session';
 
 const route = useRoute();
+const favorites = useFavoritesStore();
+const session = useSessionStore();
 
 const seller = ref(null);
 const listings = ref([]);
@@ -34,6 +39,7 @@ const contactListing = ref(null);
 const isContactOpen = ref(false);
 const reportListing = ref(null);
 const isReportOpen = ref(false);
+const favoriteBusyId = ref(null);
 
 const sellerId = computed(() => Number(route.params.id));
 const isLoading = computed(() => status.value === 'loading');
@@ -135,7 +141,36 @@ function handleReport(listing) {
     isReportOpen.value = true;
 }
 
+/**
+ * @param {object} listing
+ * @returns {Promise<void>}
+ */
+async function toggleFavorite(listing) {
+    if (!session.isAuthenticated) {
+        toast.error('Войдите, чтобы добавить лот в избранное');
+
+        return;
+    }
+
+    const id = Number(listing.id);
+    favoriteBusyId.value = id;
+
+    try {
+        const isFavorite = await favorites.toggle(id);
+
+        toast.success(isFavorite ? 'Лот добавлен в избранное' : 'Лот убран из избранного');
+    } catch (requestError) {
+        toast.error(requestError?.message ?? 'Не удалось обновить избранное');
+    } finally {
+        favoriteBusyId.value = null;
+    }
+}
+
 onMounted(() => {
+    if (session.isAuthenticated) {
+        favorites.ensureLoaded().catch(() => {});
+    }
+
     if (hydrate(consumeInitialState('seller'), sellerId.value)) {
         return;
     }
@@ -260,8 +295,11 @@ watch(sellerId, (id) => {
                     :items="listings"
                     :total="pagination.total ?? listings.length"
                     :loading="status === 'loading'"
+                    :favorite-ids="favorites.ids"
+                    :favorite-busy-id="favoriteBusyId"
                     @contact="handleContact"
                     @report="handleReport"
+                    @favorite="toggleFavorite"
                 />
 
                 <p v-else class="rounded-xl border border-border p-6 text-sm text-muted-foreground">

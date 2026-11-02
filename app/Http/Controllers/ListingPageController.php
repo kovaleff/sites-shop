@@ -6,6 +6,7 @@ use App\Http\Resources\PublicSiteResource;
 use App\Models\Site;
 use App\Services\Seo\ListingImageGenerator;
 use App\Support\Seo\SeoMeta;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -32,6 +33,9 @@ class ListingPageController extends Controller
         $site = Site::query()
             ->publiclyVisible()
             ->with(['categories', 'owner'])
+            ->when($request->user() !== null, fn (Builder $query) => $query->withExists([
+                'favorites as is_favorite' => fn (Builder $favoritesQuery) => $favoritesQuery->where('user_id', $request->user()->id),
+            ]))
             ->findOrFail($siteId);
 
         // Слаг в URL не совпадает с названием — постоянный редирект на канонический адрес.

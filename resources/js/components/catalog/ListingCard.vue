@@ -6,13 +6,16 @@ import { Globe, Store } from '@lucide/vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import FavoriteButton from '@/components/catalog/FavoriteButton.vue';
 import { formatRub, formatRubMonthly } from '@/lib/format';
 
 const props = defineProps({
     listing: { type: Object, required: true },
+    isFavorite: { type: Boolean, default: false },
+    favoriteBusy: { type: Boolean, default: false },
 });
 
-defineEmits(['contact']);
+defineEmits(['contact', 'report', 'favorite']);
 
 const initial = computed(() => (props.listing.domain?.charAt(0) || '?').toUpperCase());
 
@@ -23,6 +26,17 @@ const hasDescription = computed(
 const zoneLabel = computed(() =>
     props.listing.domainZone ? `.${props.listing.domainZone}` : 'зона не определена',
 );
+
+const statusLabel = computed(() => props.listing.statusLabel ?? 'Активен');
+const isAvailable = computed(() => props.listing.isAvailable !== false);
+
+const statusClass = computed(() => {
+    if (!isAvailable.value) {
+        return 'border-border bg-secondary text-muted-foreground';
+    }
+
+    return 'border-verified/40 bg-verified/10 text-verified';
+});
 </script>
 
 <template>
@@ -43,14 +57,23 @@ const zoneLabel = computed(() =>
         </div>
 
         <div class="min-w-0">
-            <h3 class="line-clamp-2 text-[15px] leading-snug font-bold text-foreground">
-                <RouterLink
-                    :to="{ name: 'listing', params: { slug: listing.slug ?? listing.id } }"
-                    class="hover:text-primary hover:underline"
-                >
-                    {{ listing.title }}
-                </RouterLink>
-            </h3>
+            <div class="flex items-start justify-between gap-2">
+                <h3 class="line-clamp-2 text-[15px] leading-snug font-bold text-foreground">
+                    <RouterLink
+                        :to="{ name: 'listing', params: { slug: listing.slug ?? listing.id } }"
+                        class="hover:text-primary hover:underline"
+                    >
+                        {{ listing.title }}
+                    </RouterLink>
+                </h3>
+
+                <FavoriteButton
+                    :is-favorite="isFavorite"
+                    :busy="favoriteBusy"
+                    class="-mt-1 shrink-0"
+                    @toggle="$emit('favorite', listing)"
+                />
+            </div>
 
             <div class="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Globe class="size-3.5 shrink-0" aria-hidden="true" />
@@ -101,10 +124,11 @@ const zoneLabel = computed(() =>
             </span>
             <Badge
                 variant="outline"
-                class="w-fit border-verified/40 bg-verified/10 text-verified"
+                class="w-fit"
+                :class="statusClass"
             >
-                <span class="size-1.5 rounded-full bg-verified" aria-hidden="true" />
-                Активен
+                <span class="size-1.5 rounded-full bg-current" aria-hidden="true" />
+                {{ statusLabel }}
             </Badge>
         </div>
 
@@ -118,8 +142,22 @@ const zoneLabel = computed(() =>
         </div>
 
         <div class="col-span-2 flex flex-col items-stretch gap-1 lg:col-span-1 lg:w-auto">
-            <Button class="w-full" size="sm" @click="$emit('contact', listing)">
+            <Button
+                v-if="isAvailable"
+                class="w-full"
+                size="sm"
+                @click="$emit('contact', listing)"
+            >
                 Связаться
+            </Button>
+            <Button
+                v-else
+                class="w-full"
+                size="sm"
+                variant="secondary"
+                disabled
+            >
+                Недоступен
             </Button>
             <Button
                 variant="ghost"
