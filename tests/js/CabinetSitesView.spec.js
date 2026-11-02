@@ -136,4 +136,43 @@ describe('CabinetSitesView', () => {
         expect(wrapper.text()).toContain('Скрыто из каталога');
         expect(wrapper.text()).toContain('Сообщения: 2');
     });
+
+    it('показывает причину снятия объявления с публикации', async () => {
+        const reason =
+            'Подписка истекла 01.11.2026. Объявление снято с публикации — продлите подписку и включите его снова.';
+
+        fetchMySites.mockResolvedValue(
+            listPayload({
+                data: [
+                    {
+                        id: 6,
+                        title: 'Старый магазин',
+                        domain: 'old-shop.ru',
+                        domainZone: 'ru',
+                        status: 'inactive',
+                        statusLabel: 'Неактивен',
+                        moderationStatus: 'approved',
+                        moderationStatusLabel: 'Одобрено',
+                        moderationNote: null,
+                        unpublishReason: reason,
+                        price: 1000,
+                        monthlyRevenue: 100,
+                        hasTrademark: false,
+                        verified: true,
+                        verificationFilename: 'abc.txt',
+                        paidUntil: '2026-11-01',
+                        needsRenewal: true,
+                        isPubliclyVisible: false,
+                        unreadMessages: 0,
+                        categories: [],
+                    },
+                ],
+                meta: { page: 1, perPage: 25, total: 1, lastPage: 1, from: 1, to: 1 },
+            }),
+        );
+
+        const wrapper = await mountView();
+
+        expect(wrapper.text()).toContain(reason);
+    });
 });

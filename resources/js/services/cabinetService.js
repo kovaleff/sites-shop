@@ -11,6 +11,7 @@ import { deleteJson, fetchJson, patchJson, postJson } from '@/services/http';
  * @property {string} moderationStatus
  * @property {string} moderationStatusLabel
  * @property {string | null} moderationNote
+ * @property {string | null} unpublishReason
  * @property {number} price
  * @property {number} monthlyRevenue
  * @property {string | null} paidUntil

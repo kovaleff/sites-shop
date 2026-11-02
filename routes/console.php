@@ -8,5 +8,14 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Напоминания об истекающей подписке: за 7 и 1 день, а также в день окончания.
-Schedule::command('sites:notify-expiring')->dailyAt('09:00');
+// Жизненный цикл подписки: снять истёкшие объявления и напомнить о продлении
+// за 7 и 1 день, а также в день окончания.
+Schedule::command('sites:unpublish-expired')->dailyAt('00:10')->withoutOverlapping();
+Schedule::command('sites:notify-expiring')->dailyAt('09:00')->withoutOverlapping();
+
+// Еженедельная перепроверка доменов опубликованных объявлений.
+Schedule::command('sites:recheck-domains')->weeklyOn(1, '03:00')->withoutOverlapping();
+
+// Карта сайта и утренняя сводка жалоб модераторам.
+Schedule::command('sitemap:generate')->dailyAt('04:00')->withoutOverlapping();
+Schedule::command('reports:digest')->dailyAt('09:00')->withoutOverlapping();

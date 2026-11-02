@@ -36,12 +36,10 @@ final class DomainVerifier
 
     public function verify(string $domain, string $verificationFilename): DomainVerificationResult
     {
-        if (! $this->resolver->resolves($domain)) {
-            return DomainVerificationResult::failed('Домен не найден в DNS.');
-        }
+        $domainCheck = $this->checkDomain($domain);
 
-        if ($this->reputation->isUnsafe($domain)) {
-            return DomainVerificationResult::failed('Домен отмечен как небезопасный.');
+        if (! $domainCheck->passed) {
+            return $domainCheck;
         }
 
         if ($this->age->isTooYoung($domain)) {
@@ -54,6 +52,38 @@ final class DomainVerifier
 
         if (! $this->verificationFileExists($domain, $verificationFilename)) {
             return DomainVerificationResult::failed('Файл подтверждения не найден на сайте.');
+        }
+
+        return DomainVerificationResult::passed();
+    }
+
+    /**
+     * Проверка живости домена без файла подтверждения: используется
+     * периодической перепроверкой опубликованных объявлений.
+     */
+    public function checkAvailability(string $domain): DomainVerificationResult
+    {
+        $domainCheck = $this->checkDomain($domain);
+
+        if (! $domainCheck->passed) {
+            return $domainCheck;
+        }
+
+        if (! $this->homepageResponds($domain)) {
+            return DomainVerificationResult::failed('Сайт недоступен или на нём нет содержимого.');
+        }
+
+        return DomainVerificationResult::passed();
+    }
+
+    private function checkDomain(string $domain): DomainVerificationResult
+    {
+        if (! $this->resolver->resolves($domain)) {
+            return DomainVerificationResult::failed('Домен не найден в DNS.');
+        }
+
+        if ($this->reputation->isUnsafe($domain)) {
+            return DomainVerificationResult::failed('Домен отмечен как небезопасный.');
         }
 
         return DomainVerificationResult::passed();

@@ -39,6 +39,7 @@ class SiteResource extends JsonResource
             'verificationFilename' => $this->verification_filename,
             'verificationCheckedAt' => $this->verification_checked_at?->toIso8601String(),
             'verificationError' => $this->verification_error,
+            'unpublishReason' => $this->unpublish_reason,
             'paidUntil' => $this->paid_until?->toDateString(),
             'needsRenewal' => $this->needsRenewal(),
             'isPubliclyVisible' => $this->isPubliclyVisible(),

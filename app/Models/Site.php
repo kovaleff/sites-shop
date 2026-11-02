@@ -308,6 +308,30 @@ class Site extends Model
     }
 
     /**
+     * Снять с публикации объявление с истёкшей подпиской и записать причину
+     * для кабинета продавца. Возвращает true, если статус действительно изменился.
+     */
+    public function unpublishForExpiredSubscription(): bool
+    {
+        if ($this->status !== ListingStatus::Active) {
+            return false;
+        }
+
+        if ($this->paid_until === null || ! $this->paid_until->lt(today())) {
+            return false;
+        }
+
+        $this->status = ListingStatus::Inactive;
+        $this->unpublish_reason = sprintf(
+            'Подписка истекла %s. Объявление снято с публикации — продлите подписку и включите его снова.',
+            $this->paid_until->format('d.m.Y'),
+        );
+        $this->save();
+
+        return true;
+    }
+
+    /**
      * Скрыть проданное объявление из списка кабинета (данные сохраняются).
      */
     public function hideFromCabinet(): void
@@ -355,6 +379,7 @@ class Site extends Model
         }
 
         $this->status = $status;
+        $this->unpublish_reason = null;
 
         if ($status === ListingStatus::Sold) {
             $this->sold_at = now();
@@ -445,6 +470,7 @@ class Site extends Model
             : today();
 
         $this->paid_until = CarbonImmutable::parse($base)->addMonthsNoOverflow($months);
+        $this->unpublish_reason = null;
         $this->save();
     }
 

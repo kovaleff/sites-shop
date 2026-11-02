@@ -25,6 +25,18 @@ class SitemapController extends Controller
         return response($xml, 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
     }
 
+    /**
+     * Пересобрать карту сайта и положить её в кэш (scheduled-команда).
+     */
+    public function warm(): string
+    {
+        $xml = $this->build();
+
+        Cache::put(self::CACHE_KEY, $xml, now()->addMinutes(self::CACHE_TTL_MINUTES));
+
+        return $xml;
+    }
+
     public static function flush(): void
     {
         Cache::forget(self::CACHE_KEY);

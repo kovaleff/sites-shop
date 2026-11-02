@@ -57,6 +57,13 @@ const needsModeration = computed(() => props.site.moderationStatus !== 'approved
             {{ site.moderationNote }}
         </p>
 
+        <p
+            v-if="site.unpublishReason"
+            class="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning"
+        >
+            {{ site.unpublishReason }}
+        </p>
+
         <div class="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span v-if="site.hasTrademark">Товарный знак есть</span>
             <span v-else>Без товарного знака</span>
