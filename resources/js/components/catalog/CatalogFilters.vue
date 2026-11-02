@@ -5,6 +5,8 @@ import CategoriesField from '@/components/catalog/CategoriesField.vue';
 import DomainZoneField from '@/components/catalog/DomainZoneField.vue';
 import IncomeRangeField from '@/components/catalog/IncomeRangeField.vue';
 import PriceRangeField from '@/components/catalog/PriceRangeField.vue';
+import SearchField from '@/components/catalog/SearchField.vue';
+import SortField from '@/components/catalog/SortField.vue';
 import VerifiedField from '@/components/catalog/VerifiedField.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -49,6 +51,8 @@ function sameFilters(left, right) {
         left.incomeMin === right.incomeMin &&
         left.incomeMax === right.incomeMax &&
         left.verifiedOnly === right.verifiedOnly &&
+        left.search === right.search &&
+        left.sort === right.sort &&
         [...left.zones].sort().join(',') === [...right.zones].sort().join(',') &&
         [...left.categories].sort().join(',') === [...right.categories].sort().join(',')
     );
@@ -135,6 +139,19 @@ const verifiedOnly = computed({
     },
 });
 
+const search = computed({
+    get: () => draft.value.search,
+    set: (value) => {
+        draft.value.search = value;
+    },
+});
+
+const sort = computed({
+    get: () => draft.value.sort,
+    set: (value) => {
+        draft.value.sort = value;
+    },
+});
 </script>
 
 <template>
@@ -160,7 +177,9 @@ const verifiedOnly = computed({
             </Button>
         </div>
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <SearchField v-model="search" class="mb-4" />
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <PriceRangeField
                 v-model="priceRange"
                 :min="PRICE_BOUNDS.min"
@@ -188,6 +207,8 @@ const verifiedOnly = computed({
                 :step="INCOME_BOUNDS.step"
                 label="Доход, ₽/мес"
             />
+
+            <SortField v-model="sort" />
 
             <VerifiedField v-model="verifiedOnly" class="sm:col-span-2 lg:col-span-2 xl:col-span-1" />
         </div>

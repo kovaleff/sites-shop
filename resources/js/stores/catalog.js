@@ -17,6 +17,8 @@ function cloneFilters(filters) {
         zones: [...filters.zones],
         categories: [...filters.categories],
         verifiedOnly: filters.verifiedOnly,
+        search: filters.search,
+        sort: filters.sort,
     };
 }
 

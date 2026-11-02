@@ -1,4 +1,13 @@
-import { DEFAULT_ZONES, INCOME_BOUNDS, PRICE_BOUNDS } from '@/lib/catalogConfig';
+import {
+    DEFAULT_SORT,
+    DEFAULT_ZONES,
+    INCOME_BOUNDS,
+    PRICE_BOUNDS,
+    SEARCH_MAX_LENGTH,
+    SORT_OPTIONS,
+} from '@/lib/catalogConfig';
+
+const SORT_VALUES = new Set(SORT_OPTIONS.map((option) => option.value));
 
 /**
  * @param {unknown} value
@@ -151,6 +160,31 @@ function normalizeVerified(raw) {
 }
 
 /**
+ * Поисковая строка обрезается по краям и ограничивается сверху, чтобы не
+ * раздувать URL и запрос. Минимум символов проверяет API.
+ *
+ * @param {unknown} raw
+ * @returns {string}
+ */
+export function normalizeSearch(raw) {
+    if (typeof raw !== 'string') {
+        return '';
+    }
+
+    return raw.trim().slice(0, SEARCH_MAX_LENGTH);
+}
+
+/**
+ * @param {unknown} raw
+ * @returns {string}
+ */
+export function normalizeSort(raw) {
+    const value = typeof raw === 'string' ? raw.trim() : '';
+
+    return SORT_VALUES.has(value) ? value : DEFAULT_SORT;
+}
+
+/**
  * @returns {{
  *   priceMin: number,
  *   priceMax: number,
@@ -159,6 +193,8 @@ function normalizeVerified(raw) {
  *   zones: string[],
  *   categories: string[],
  *   verifiedOnly: boolean,
+ *   search: string,
+ *   sort: string,
  * }}
  */
 export function createDefaultFilters() {
@@ -170,6 +206,8 @@ export function createDefaultFilters() {
         zones: [],
         categories: [],
         verifiedOnly: false,
+        search: '',
+        sort: DEFAULT_SORT,
     };
 }
 
@@ -206,6 +244,8 @@ export function normalizeFilters(raw, availableZones, availableCategories) {
         zones: normalizeZones(source.zones, availableZones),
         categories: normalizeCategories(source.categories, availableCategories),
         verifiedOnly: normalizeVerified(source.verifiedOnly),
+        search: normalizeSearch(source.search),
+        sort: normalizeSort(source.sort),
     };
 }
 
@@ -227,6 +267,8 @@ export function parseFiltersFromQuery(query, availableZones, availableCategories
             zones: source.zones,
             categories: source.categories,
             verifiedOnly: source.verified,
+            search: source.q,
+            sort: source.sort,
         },
         availableZones,
         availableCategories,
@@ -267,6 +309,18 @@ export function serializeFiltersToQuery(filters, page = 1) {
 
     if (filters.verifiedOnly) {
         query.verified = '1';
+    }
+
+    const search = normalizeSearch(filters.search);
+
+    if (search !== '') {
+        query.q = search;
+    }
+
+    const sort = normalizeSort(filters.sort);
+
+    if (sort !== DEFAULT_SORT) {
+        query.sort = sort;
     }
 
     const normalizedPage = normalizePage(page);
@@ -316,6 +370,14 @@ export function countActiveFilters(filters) {
     }
 
     if (filters.verifiedOnly) {
+        count += 1;
+    }
+
+    if (normalizeSearch(filters.search) !== '') {
+        count += 1;
+    }
+
+    if (normalizeSort(filters.sort) !== DEFAULT_SORT) {
         count += 1;
     }
 

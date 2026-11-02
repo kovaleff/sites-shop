@@ -80,6 +80,30 @@ describe('catalogService.fetchListings', () => {
         expect(requested).toContain('verified=1');
     });
 
+    it('передаёт поиск и сортировку', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [], meta: meta() }));
+
+        vi.stubGlobal('fetch', fetchMock);
+
+        await fetchListings({ search: '  ферма  ', sort: 'price_asc' });
+
+        const requested = String(fetchMock.mock.calls[0][0]);
+        expect(requested).toContain('q=%D1%84%D0%B5%D1%80%D0%BC%D0%B0');
+        expect(requested).toContain('sort=price_asc');
+    });
+
+    it('подставляет сортировку по умолчанию и не передаёт пустой поиск', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [], meta: meta() }));
+
+        vi.stubGlobal('fetch', fetchMock);
+
+        await fetchListings({ search: '   ', sort: 'unknown' });
+
+        const requested = String(fetchMock.mock.calls[0][0]);
+        expect(requested).toContain('sort=newest');
+        expect(requested).not.toContain('q=');
+    });
+
     it('не передаёт пустой список тематик', async () => {
         const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [], meta: meta() }));
 

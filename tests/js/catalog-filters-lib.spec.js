@@ -20,6 +20,8 @@ describe('createDefaultFilters', () => {
             zones: [],
             categories: [],
             verifiedOnly: false,
+            search: '',
+            sort: 'newest',
         });
     });
 });
@@ -86,6 +88,17 @@ describe('parseFiltersFromQuery', () => {
         expect(parseFiltersFromQuery({ verified: '1' }, ZONES).verifiedOnly).toBe(true);
     });
 
+    it('переносит поиск из q и обрезает пробелы', () => {
+        expect(parseFiltersFromQuery({ q: '  ферма  ' }, ZONES).search).toBe('ферма');
+        expect(parseFiltersFromQuery({}, ZONES).search).toBe('');
+    });
+
+    it('нормализует сортировку и отбрасывает неизвестную', () => {
+        expect(parseFiltersFromQuery({ sort: 'price_asc' }, ZONES).sort).toBe('price_asc');
+        expect(parseFiltersFromQuery({ sort: 'unknown' }, ZONES).sort).toBe('newest');
+        expect(parseFiltersFromQuery({}, ZONES).sort).toBe('newest');
+    });
+
     it('нормализует некорректный номер страницы', () => {
         expect(normalizePage(0)).toBe(1);
         expect(normalizePage(-1)).toBe(1);
@@ -97,6 +110,35 @@ describe('parseFiltersFromQuery', () => {
 describe('serializeFiltersToQuery', () => {
     it('не пишет значения по умолчанию', () => {
         expect(serializeFiltersToQuery(createDefaultFilters(), 1)).toEqual({});
+    });
+
+    it('пишет поиск и нестандартную сортировку', () => {
+        expect(
+            serializeFiltersToQuery(
+                {
+                    ...createDefaultFilters(),
+                    search: '  ферма  ',
+                    sort: 'price_desc',
+                },
+                1,
+            ),
+        ).toEqual({
+            q: 'ферма',
+            sort: 'price_desc',
+        });
+    });
+
+    it('не пишет поиск из одних пробелов и неизвестную сортировку', () => {
+        expect(
+            serializeFiltersToQuery(
+                {
+                    ...createDefaultFilters(),
+                    search: '   ',
+                    sort: 'unknown',
+                },
+                1,
+            ),
+        ).toEqual({});
     });
 
     it('пишет только изменённые фильтры и страницу', () => {
@@ -162,6 +204,24 @@ describe('countActiveFilters', () => {
                 priceMax: 0,
             }),
         ).toBe(1);
+    });
+
+    it('считает поиск и нестандартную сортировку активными', () => {
+        expect(
+            countActiveFilters({
+                ...createDefaultFilters(),
+                search: 'ферма',
+                sort: 'price_asc',
+            }),
+        ).toBe(2);
+
+        expect(
+            countActiveFilters({
+                ...createDefaultFilters(),
+                search: '   ',
+                sort: 'newest',
+            }),
+        ).toBe(0);
     });
 });
 

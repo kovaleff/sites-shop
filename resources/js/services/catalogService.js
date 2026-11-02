@@ -1,5 +1,5 @@
 import { INCOME_BOUNDS, PAGE_SIZE, PRICE_BOUNDS } from '@/lib/catalogConfig';
-import { sortCategories, sortZones } from '@/lib/catalogFilters';
+import { normalizeSearch, normalizeSort, sortCategories, sortZones } from '@/lib/catalogFilters';
 import { fetchJson } from '@/services/http';
 
 /**
@@ -33,8 +33,14 @@ function buildQuery(query = {}) {
         income_min: String(bound(query.incomeMin, INCOME_BOUNDS.min)),
         income_max: String(bound(query.incomeMax, INCOME_BOUNDS.max)),
         page: String(page),
-        sort: 'newest',
+        sort: normalizeSort(query.sort),
     });
+
+    const search = normalizeSearch(query.search);
+
+    if (search !== '') {
+        params.set('q', search);
+    }
 
     const zones = sortZones(
         (Array.isArray(query.zones) ? query.zones : [])

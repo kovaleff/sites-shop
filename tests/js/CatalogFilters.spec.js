@@ -58,9 +58,11 @@ describe('CatalogFilters', () => {
         document.body.innerHTML = '';
     });
 
-    it('рендерит пять полей, зоны и тематики из prop', () => {
+    it('рендерит поиск, сортировку, фильтры, зоны и тематики из prop', () => {
         const wrapper = mountFilters();
 
+        expect(wrapper.text()).toContain('Поиск');
+        expect(wrapper.text()).toContain('Сортировка');
         expect(wrapper.text()).toContain('Цена, ₽');
         expect(wrapper.text()).toContain('Домен / зона');
         expect(wrapper.text()).toContain('Тематики');
@@ -68,6 +70,42 @@ describe('CatalogFilters', () => {
         expect(wrapper.text()).toContain('Проверен');
         expect(wrapper.text()).toContain('Все зоны');
         expect(wrapper.text()).toContain('Все тематики');
+    });
+
+    it('эмитит apply с поисковой строкой', async () => {
+        vi.useFakeTimers();
+
+        try {
+            const wrapper = mountFilters();
+
+            await wrapper.find('input[type="search"]').setValue('ферма');
+            await vi.advanceTimersByTimeAsync(300);
+
+            const payload = wrapper.emitted('apply').at(-1)[0];
+
+            expect(payload.search).toBe('ферма');
+            expect(payload.sort).toBe('newest');
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('эмитит apply с выбранной сортировкой', async () => {
+        vi.useFakeTimers();
+
+        try {
+            const wrapper = mountFilters();
+
+            await wrapper.find('select').setValue('price_desc');
+            await vi.advanceTimersByTimeAsync(300);
+
+            const payload = wrapper.emitted('apply').at(-1)[0];
+
+            expect(payload.sort).toBe('price_desc');
+            expect(payload.search).toBe('');
+        } finally {
+            vi.useRealTimers();
+        }
     });
 
     it('скрывает счётчик при нуле и показывает фактическое число', async () => {

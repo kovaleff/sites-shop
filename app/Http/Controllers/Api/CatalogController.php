@@ -5,12 +5,19 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PublicSiteResource;
 use App\Models\Site;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class CatalogController extends Controller
 {
+    private const SORT_KEYS = ['newest', 'price_asc', 'price_desc', 'income_desc', 'income_asc'];
+
+    private const SEARCH_MIN_LENGTH = 2;
+
+    private const SEARCH_MAX_LENGTH = 100;
+
     /**
      * Публичный каталог с фильтрами контракта 003.
      */
@@ -34,6 +41,9 @@ class CatalogController extends Controller
             ->values()
             ->all();
 
+        $search = $this->searchTerm($request->query('q'));
+        $sort = $this->sortKey($request->query('sort'));
+
         $sites = Site::query()
             ->publiclyVisible()
             ->with('owner')
@@ -47,8 +57,12 @@ class CatalogController extends Controller
                 fn ($categoriesQuery) => $categoriesQuery->whereIn('categories.slug', $categories),
             ))
             ->when($request->boolean('verified'), fn ($query) => $query->where('verified', true))
-            ->orderByDesc('created_at')
-            ->orderBy('id')
+            ->when($search !== null, fn ($query) => $query->where(
+                fn ($searchQuery) => $searchQuery
+                    ->where('title', 'like', '%'.$search.'%')
+                    ->orWhere('domain', 'like', '%'.$search.'%'),
+            ))
+            ->tap(fn ($query) => $this->applySort($query, $sort))
             ->paginate(25);
 
         return response()->json([
@@ -101,5 +115,45 @@ class CatalogController extends Controller
         }
 
         return max(0, (int) $value);
+    }
+
+    /**
+     * Поисковый запрос короче двух символов не применяется.
+     */
+    private function searchTerm(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $term = trim($value);
+
+        if (mb_strlen($term) < self::SEARCH_MIN_LENGTH) {
+            return null;
+        }
+
+        return mb_substr($term, 0, self::SEARCH_MAX_LENGTH);
+    }
+
+    /**
+     * Неизвестный порядок сортировки заменяется порядком по умолчанию.
+     */
+    private function sortKey(mixed $value): string
+    {
+        return is_string($value) && in_array($value, self::SORT_KEYS, true) ? $value : 'newest';
+    }
+
+    /**
+     * @param  Builder<Site>  $query
+     */
+    private function applySort(Builder $query, string $sort): void
+    {
+        match ($sort) {
+            'price_asc' => $query->orderBy('price')->orderBy('id'),
+            'price_desc' => $query->orderByDesc('price')->orderBy('id'),
+            'income_asc' => $query->orderBy('monthly_revenue')->orderBy('id'),
+            'income_desc' => $query->orderByDesc('monthly_revenue')->orderBy('id'),
+            default => $query->orderByDesc('created_at')->orderBy('id'),
+        };
     }
 }

@@ -18,6 +18,18 @@ export const INCOME_BOUNDS = Object.freeze({
 
 export const DEFAULT_SORT = 'newest';
 
+export const SORT_OPTIONS = Object.freeze([
+    { value: 'newest', label: 'Сначала новые' },
+    { value: 'price_asc', label: 'Цена: по возрастанию' },
+    { value: 'price_desc', label: 'Цена: по убыванию' },
+    { value: 'income_desc', label: 'Доход: по убыванию' },
+    { value: 'income_asc', label: 'Доход: по возрастанию' },
+]);
+
+export const SEARCH_MIN_LENGTH = 2;
+
+export const SEARCH_MAX_LENGTH = 100;
+
 export const MOCK_LATENCY_MS = 250;
 export const SLOW_LATENCY_MS = 2000;
 export const MAX_PAGE_LINKS = 5;
