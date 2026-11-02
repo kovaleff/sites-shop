@@ -36,7 +36,7 @@ onMounted(async () => {
     const slug = String(route.params.slug ?? '');
     const hydrated = consumeInitialState('listing');
 
-    if (hydrated && hydrated.slug === slug) {
+    if (hydrated && hydrated.slug === slug) { 
         listing.value = hydrated;
         status.value = 'ready';
 

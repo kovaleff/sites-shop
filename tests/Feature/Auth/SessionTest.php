@@ -48,6 +48,21 @@ class SessionTest extends TestCase
             ]);
     }
 
+    public function test_csrf_token_endpoint_returns_current_session_token(): void
+    {
+        $first = $this->getJson('/api/v1/csrf-token')
+            ->assertOk()
+            ->assertJsonStructure(['csrfToken'])
+            ->json('csrfToken');
+
+        $second = $this->getJson('/api/v1/csrf-token')
+            ->assertOk()
+            ->json('csrfToken');
+
+        $this->assertNotEmpty($first);
+        $this->assertSame($first, $second, 'Токен не должен меняться без регенерации сессии.');
+    }
+
     public function test_authenticated_user_payload_contains_display_data(): void
     {
         $user = User::factory()->vk()->create([

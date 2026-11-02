@@ -107,6 +107,7 @@ Route::get('/api/ya/callback', [YandexAuthController::class, 'callback'])
 
 // Сессионные маршруты SPA.
 Route::get('/api/v1/user', [SessionController::class, 'user'])->name('api.v1.user');
+Route::get('/api/v1/csrf-token', [SessionController::class, 'csrfToken'])->name('api.v1.csrf-token');
 Route::post('/api/v1/auth/logout', [SessionController::class, 'logout'])->name('api.v1.auth.logout');
 
 // JSON-API кабинета и публичного каталога (contracts/cabinet-api.yaml).

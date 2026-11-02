@@ -3,10 +3,14 @@
  *
  * Все запросы ходят с cookie-сессией (credentials: 'same-origin'),
  * заголовками X-CSRF-TOKEN / X-Requested-With и Accept: application/json.
+ * Если сессия успела перегенерироваться, токен перечитывается при 419.
  */
 const CSRF_META_SELECTOR = 'meta[name="csrf-token"]';
+const CSRF_REFRESH_PATH = '/api/v1/csrf-token';
 
 let unauthorizedHandler = null;
+let csrfRefreshPromise = null;
+let csrfTokenCache = null;
 
 /**
  * Единый обработчик потери сессии: регистрируется в app.js,
@@ -25,21 +29,66 @@ export function setUnauthorizedHandler(handler) {
 export function readCsrfToken() {
     const meta = document.querySelector(CSRF_META_SELECTOR);
 
-    return meta?.getAttribute('content') ?? '';
+    if (meta) {
+        return meta.getAttribute('content') ?? '';
+    }
+
+    return csrfTokenCache ?? '';
 }
 
 /**
- * Обновить токен после logout, где сервер регенерирует CSRF (spa-auth-errors.md §3.4).
+ * Обновить токен после logout или перегенерации сессии (spa-auth-errors.md §3.4).
  *
  * @param {string} token
  * @returns {void}
  */
 export function writeCsrfToken(token) {
+    csrfTokenCache = token;
+
     const meta = document.querySelector(CSRF_META_SELECTOR);
 
     if (meta) {
         meta.setAttribute('content', token);
     }
+}
+
+/**
+ * Запросить у сервера актуальный CSRF-токен текущей сессии и обновить мета-тег.
+ *
+ * Нужен, когда страница отрисована со старым токеном: сессия перегенерирована
+ * входом в другой вкладке, страница восстановлена из bfcache или истекла.
+ * Параллельные вызовы переиспользуют один запрос.
+ *
+ * @returns {Promise<string | null>}
+ */
+export function refreshCsrfToken() {
+    if (csrfRefreshPromise) {
+        return csrfRefreshPromise;
+    }
+
+    csrfRefreshPromise = fetch(CSRF_REFRESH_PATH, {
+        credentials: 'same-origin',
+        headers: {
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data) => {
+            if (typeof data?.csrfToken !== 'string' || data.csrfToken === '') {
+                return null;
+            }
+
+            writeCsrfToken(data.csrfToken);
+
+            return data.csrfToken;
+        })
+        .catch(() => null)
+        .finally(() => {
+            csrfRefreshPromise = null;
+        });
+
+    return csrfRefreshPromise;
 }
 
 /**
@@ -51,7 +100,10 @@ export function writeCsrfToken(token) {
  */
 function throwHttpError(response, data) {
     const code = data?.error ?? null;
-    const message = data?.message ?? `Ошибка запроса (${response.status})`;
+    const message = data?.message
+        ?? (response.status === 419
+            ? 'Сессия устарела. Обновите страницу и попробуйте ещё раз.'
+            : `Ошибка запроса (${response.status})`);
     const error = new Error(message);
 
     error.status = response.status;
@@ -62,14 +114,15 @@ function throwHttpError(response, data) {
 }
 
 /**
+ * Выполнить запрос. При 419 токен перечитывается и запрос повторяется один раз,
+ * поэтому устаревший мета-тег не превращается в ошибку для пользователя.
+ *
  * @param {string} path
- * @param {object} [options]
- * @param {'GET' | 'POST' | 'PATCH' | 'DELETE'} [options.method]
- * @param {object} [options.body]
- * @param {Record<string, string>} [options.headers]
+ * @param {{ method?: 'GET' | 'POST' | 'PATCH' | 'DELETE', body?: object | null, headers?: Record<string, string> }} options
+ * @param {boolean} isRetry
  * @returns {Promise<object | null>}
  */
-async function request(path, { method = 'GET', body = null, headers = {} } = {}) {
+async function send(path, { method = 'GET', body = null, headers = {} } = {}, isRetry = false) {
     const response = await fetch(path, {
         method,
         credentials: 'same-origin',
@@ -95,6 +148,14 @@ async function request(path, { method = 'GET', body = null, headers = {} } = {})
     }
 
     if (!response.ok) {
+        if (response.status === 419 && !isRetry) {
+            const token = await refreshCsrfToken();
+
+            if (token !== null) {
+                return send(path, { method, body, headers }, true);
+            }
+        }
+
         if (response.status === 401 && unauthorizedHandler) {
             unauthorizedHandler();
         }
@@ -109,27 +170,27 @@ async function request(path, { method = 'GET', body = null, headers = {} } = {})
  * @param {string} path
  * @returns {Promise<object | null>}
  */
-export const fetchJson = (path) => request(path);
+export const fetchJson = (path) => send(path);
 
 /**
  * @param {string} path
  * @param {object} [body]
  * @returns {Promise<object | null>}
  */
-export const postJson = (path, body = {}) => request(path, { method: 'POST', body });
+export const postJson = (path, body = {}) => send(path, { method: 'POST', body });
 
 /**
  * @param {string} path
  * @param {object} [body]
  * @returns {Promise<object | null>}
  */
-export const patchJson = (path, body = {}) => request(path, { method: 'PATCH', body });
+export const patchJson = (path, body = {}) => send(path, { method: 'PATCH', body });
 
 /**
  * @param {string} path
  * @returns {Promise<object | null>}
  */
-export const deleteJson = (path) => request(path, { method: 'DELETE' });
+export const deleteJson = (path) => send(path, { method: 'DELETE' });
 
 const http = {
     fetchJson,
@@ -137,6 +198,7 @@ const http = {
     patchJson,
     deleteJson,
     readCsrfToken,
+    refreshCsrfToken,
     writeCsrfToken,
 };
 
