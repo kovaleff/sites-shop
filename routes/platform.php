@@ -18,6 +18,7 @@ use App\Orchid\Screens\Examples\ExampleTextEditorsScreen;
 use App\Orchid\Screens\Message\MessageListScreen;
 use App\Orchid\Screens\Message\MessageShowScreen;
 use App\Orchid\Screens\PlatformScreen;
+use App\Orchid\Screens\Review\ReviewListScreen;
 use App\Orchid\Screens\Role\RoleEditScreen;
 use App\Orchid\Screens\Role\RoleListScreen;
 use App\Orchid\Screens\Site\ModerationQueueScreen;
@@ -137,6 +138,13 @@ Route::screen('marketplace/categories', CategoryListScreen::class)
     ->breadcrumbs(fn (Trail $trail) => $trail
         ->parent('platform.index')
         ->push('Тематики', route('platform.marketplace.categories')));
+
+// Platform > Marketplace > Reviews
+Route::screen('marketplace/reviews', ReviewListScreen::class)
+    ->name('platform.marketplace.reviews')
+    ->breadcrumbs(fn (Trail $trail) => $trail
+        ->parent('platform.index')
+        ->push('Отзывы', route('platform.marketplace.reviews')));
 
 // Platform > Marketplace > Conversations
 Route::screen('marketplace/conversations', ConversationListScreen::class)

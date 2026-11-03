@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\MySiteController;
 use App\Http\Controllers\Api\NotificationSettingsController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SavedSearchController;
 use App\Http\Controllers\Api\SellerController;
 use App\Http\Controllers\Api\SessionController;
@@ -136,6 +137,9 @@ Route::prefix('api/v1')->group(function () {
     Route::get('/sellers/{seller}', [SellerController::class, 'show'])
         ->whereNumber('seller')
         ->name('api.v1.sellers.show');
+    Route::get('/sellers/{seller}/reviews', [ReviewController::class, 'sellerReviews'])
+        ->whereNumber('seller')
+        ->name('api.v1.sellers.reviews');
 
     Route::middleware('auth')->group(function () {
         Route::get('/profile', [ProfileController::class, 'show'])->name('api.v1.profile.show');
@@ -170,6 +174,13 @@ Route::prefix('api/v1')->group(function () {
         Route::delete('/favorites/{site}', [FavoriteController::class, 'destroy'])
             ->whereNumber('site')
             ->name('api.v1.favorites.destroy');
+
+        Route::get('/reviews/pending', [ReviewController::class, 'pending'])->name('api.v1.reviews.pending');
+        Route::get('/reviews/mine', [ReviewController::class, 'mine'])->name('api.v1.reviews.mine');
+        Route::post('/sites/{site}/reviews', [ReviewController::class, 'store'])
+            ->whereNumber('site')
+            ->middleware('throttle:10,1')
+            ->name('api.v1.sites.reviews.store');
 
         Route::get('/saved-searches', [SavedSearchController::class, 'index'])->name('api.v1.saved-searches.index');
         Route::post('/saved-searches', [SavedSearchController::class, 'store'])->name('api.v1.saved-searches.store');

@@ -75,6 +75,16 @@ const router = createRouter({
             },
         },
         {
+            path: '/cabinet/reviews',
+            name: 'cabinet-reviews',
+            component: () => import('@/views/cabinet/CabinetReviewsView.vue'),
+            meta: {
+                navKey: 'cabinet',
+                title: 'Отзывы',
+                requiresAuth: true,
+            },
+        },
+        {
             path: '/cabinet/hidden',
             name: 'cabinet-hidden',
             component: () => import('@/views/cabinet/CabinetHiddenView.vue'),

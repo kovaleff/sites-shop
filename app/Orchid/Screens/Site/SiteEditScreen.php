@@ -14,6 +14,7 @@ use App\Orchid\Layouts\Site\SiteEditLayout;
 use App\Orchid\Layouts\Site\SiteModerationLayout;
 use App\Orchid\Layouts\Site\SitePaymentsTable;
 use App\Orchid\Layouts\Site\SiteReportsTable;
+use App\Orchid\Layouts\Site\SiteReviewsTable;
 use App\Orchid\Layouts\Site\SiteStatusLayout;
 use App\Orchid\Layouts\Site\SiteVerificationLayout;
 use Closure;
@@ -69,6 +70,11 @@ class SiteEditScreen extends Screen
                 ->get(),
             'reports' => $site->reports()
                 ->with('reporter')
+                ->latest()
+                ->limit(20)
+                ->get(),
+            'reviews' => $site->reviews()
+                ->with('author')
                 ->latest()
                 ->limit(20)
                 ->get(),
@@ -155,6 +161,9 @@ class SiteEditScreen extends Screen
 
             Layout::block(SiteReportsTable::class)
                 ->title('Жалобы пользователей'),
+
+            Layout::block(SiteReviewsTable::class)
+                ->title('Отзывы покупателей'),
         ];
     }
 

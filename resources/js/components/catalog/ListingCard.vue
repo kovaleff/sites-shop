@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import FavoriteButton from '@/components/catalog/FavoriteButton.vue';
+import RatingStars from '@/components/reviews/RatingStars.vue';
 import { formatRub, formatRubMonthly } from '@/lib/format';
 
 const props = defineProps({
@@ -93,6 +94,12 @@ const statusClass = computed(() => {
                 >
                     {{ listing.seller.displayName }}
                 </RouterLink>
+
+                <RatingStars
+                    v-if="Number(listing.seller.reviewsCount ?? 0) > 0"
+                    :rating="Number(listing.seller.ratingAvg ?? 0)"
+                    :count="listing.seller.reviewsCount"
+                />
             </div>
 
             <p class="mt-1 line-clamp-2 min-h-[2.6em] text-xs text-muted-foreground">

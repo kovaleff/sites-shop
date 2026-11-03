@@ -8,6 +8,7 @@ import {
     CalendarDays,
     MapPin,
     PackageCheck,
+    Star,
     Store,
 } from '@lucide/vue';
 
@@ -15,6 +16,7 @@ import ContactSellerDialog from '@/components/catalog/ContactSellerDialog.vue';
 import ReportListingDialog from '@/components/catalog/ReportListingDialog.vue';
 import CatalogPagination from '@/components/catalog/CatalogPagination.vue';
 import ListingList from '@/components/catalog/ListingList.vue';
+import RatingStars from '@/components/reviews/RatingStars.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -23,6 +25,7 @@ import { consumeInitialState } from '@/lib/initialState';
 import { applySellerMeta } from '@/lib/pageMeta';
 import { formatCount, formatDate } from '@/lib/format';
 import { fetchSeller } from '@/services/sellerService';
+import { fetchSellerReviews } from '@/services/reviewService';
 import { useFavoritesStore } from '@/stores/favorites';
 import { useSessionStore } from '@/stores/session';
 
@@ -33,6 +36,9 @@ const session = useSessionStore();
 const seller = ref(null);
 const listings = ref([]);
 const pagination = ref({ page: 1, lastPage: 1, total: 0 });
+const reviews = ref([]);
+const reviewsMeta = ref({ page: 1, lastPage: 1, total: 0 });
+const reviewsStatus = ref('loading');
 const status = ref('loading');
 const error = ref('');
 const contactListing = ref(null);
@@ -45,20 +51,34 @@ const sellerId = computed(() => Number(route.params.id));
 const isLoading = computed(() => status.value === 'loading');
 const isError = computed(() => status.value === 'error');
 const initial = computed(() => (seller.value?.displayName?.charAt(0) || '?').toUpperCase());
-const stats = computed(() => [
-    {
-        label: 'Опубликовано',
-        value: formatCount(seller.value?.publishedSitesCount ?? 0),
-        icon: Store,
-        tone: 'text-primary',
-    },
-    {
-        label: 'Продано',
-        value: formatCount(seller.value?.soldSitesCount ?? 0),
-        icon: PackageCheck,
-        tone: 'text-verified',
-    },
-]);
+const hasRating = computed(() => Number(seller.value?.reviewsCount ?? 0) > 0);
+const stats = computed(() => {
+    const items = [
+        {
+            label: 'Опубликовано',
+            value: formatCount(seller.value?.publishedSitesCount ?? 0),
+            icon: Store,
+            tone: 'text-primary',
+        },
+        {
+            label: 'Продано',
+            value: formatCount(seller.value?.soldSitesCount ?? 0),
+            icon: PackageCheck,
+            tone: 'text-verified',
+        },
+    ];
+
+    if (hasRating.value) {
+        items.push({
+            label: 'Рейтинг',
+            value: `${Number(seller.value?.ratingAvg ?? 0).toFixed(1).replace('.', ',')} · ${formatCount(seller.value?.reviewsCount ?? 0)}`,
+            icon: Star,
+            tone: 'text-amber-400',
+        });
+    }
+
+    return items;
+});
 
 /**
  * Гидратация из серверного состояния: страница отрисована без запроса к API.
@@ -75,9 +95,69 @@ function hydrate(hydrated, id) {
     seller.value = hydrated.data;
     listings.value = Array.isArray(hydrated.listings) ? hydrated.listings : [];
     pagination.value = hydrated.meta ?? { page: 1, lastPage: 1, total: 0 };
+
+    if (Array.isArray(hydrated.reviews)) {
+        reviews.value = hydrated.reviews;
+        reviewsMeta.value = hydrated.reviewsMeta ?? { page: 1, lastPage: 1, total: hydrated.reviews.length };
+        reviewsStatus.value = 'ready';
+    }
+
     status.value = 'ready';
 
     return true;
+}
+
+/**
+ * Лента отзывов грузится отдельно: профиль остаётся доступным,
+ * даже если отзывы не загрузились.
+ *
+ * @param {number} id
+ * @param {number} page
+ * @param {boolean} append
+ * @returns {Promise<void>}
+ */
+async function loadReviews(id, page = 1, append = false) {
+    if (!append) {
+        reviewsStatus.value = 'loading';
+    }
+
+    try {
+        const payload = await fetchSellerReviews(id, page);
+
+        if (sellerId.value !== id) {
+            return;
+        }
+
+        reviews.value = append ? [...reviews.value, ...payload.items] : payload.items;
+        reviewsMeta.value = payload.meta;
+        reviewsStatus.value = 'ready';
+    } catch {
+        if (sellerId.value !== id) {
+            return;
+        }
+
+        if (append) {
+            reviewsStatus.value = 'ready';
+
+            return;
+        }
+
+        reviews.value = [];
+        reviewsStatus.value = 'error';
+    }
+}
+
+/**
+ * @returns {Promise<void>}
+ */
+async function showMoreReviews() {
+    const nextPage = Number(reviewsMeta.value.page ?? 1) + 1;
+
+    if (nextPage > Number(reviewsMeta.value.lastPage ?? 1)) {
+        return;
+    }
+
+    await loadReviews(sellerId.value, nextPage, true);
 }
 
 /**
@@ -104,6 +184,7 @@ async function load(id, page = 1) {
         pagination.value = payload.meta;
         status.value = 'ready';
         applySellerMeta(payload.seller);
+        loadReviews(id, 1);
     } catch (requestError) {
         status.value = 'error';
         error.value =
@@ -172,6 +253,10 @@ onMounted(() => {
     }
 
     if (hydrate(consumeInitialState('seller'), sellerId.value)) {
+        if (reviewsStatus.value === 'loading') {
+            loadReviews(sellerId.value);
+        }
+
         return;
     }
 
@@ -181,6 +266,9 @@ onMounted(() => {
 watch(sellerId, (id) => {
     seller.value = null;
     listings.value = [];
+    reviews.value = [];
+    reviewsMeta.value = { page: 1, lastPage: 1, total: 0 };
+    reviewsStatus.value = 'loading';
     load(id);
 });
 </script>
@@ -239,6 +327,12 @@ watch(sellerId, (id) => {
                                 <BadgeCheck class="size-3.5" aria-hidden="true" />
                                 Проверенный продавец
                             </Badge>
+
+                            <RatingStars
+                                v-if="hasRating"
+                                :rating="Number(seller.ratingAvg ?? 0)"
+                                :count="seller.reviewsCount"
+                            />
                         </div>
 
                         <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
@@ -312,6 +406,95 @@ watch(sellerId, (id) => {
                     :last-page="pagination.lastPage ?? 1"
                     @update:page="changePage"
                 />
+            </section>
+
+            <section id="seller-reviews" class="mt-8 scroll-mt-24">
+                <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
+                    <h2 class="text-lg font-bold text-foreground">Отзывы покупателей</h2>
+
+                    <RatingStars
+                        v-if="hasRating"
+                        :rating="Number(seller.ratingAvg ?? 0)"
+                        :count="seller.reviewsCount"
+                        size="md"
+                    />
+                </div>
+
+                <div v-if="reviewsStatus === 'loading'" class="flex flex-col gap-3">
+                    <Skeleton class="h-24 w-full rounded-xl" />
+                </div>
+
+                <p
+                    v-else-if="reviewsStatus === 'error'"
+                    class="rounded-xl border border-border p-6 text-sm text-muted-foreground"
+                >
+                    Не удалось загрузить отзывы.
+                </p>
+
+                <p
+                    v-else-if="reviews.length === 0"
+                    class="rounded-xl border border-border p-6 text-sm text-muted-foreground"
+                >
+                    Пока нет опубликованных отзывов — отзывы проходят проверку модератора.
+                </p>
+
+                <template v-else>
+                    <div class="flex flex-col gap-3">
+                        <Card
+                            v-for="review in reviews"
+                            :key="review.id"
+                            class="flex flex-col gap-2 border-border bg-card p-4"
+                        >
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-secondary text-xs font-extrabold text-primary"
+                                    >
+                                        <img
+                                            v-if="review.author?.avatarUrl"
+                                            :src="review.author.avatarUrl"
+                                            :alt="review.author.displayName"
+                                            class="size-full object-cover"
+                                        />
+                                        <span v-else aria-hidden="true">
+                                            {{ (review.author?.displayName?.charAt(0) || '?').toUpperCase() }}
+                                        </span>
+                                    </span>
+
+                                    <span class="text-sm font-semibold text-foreground">
+                                        {{ review.author?.displayName ?? 'Покупатель' }}
+                                    </span>
+
+                                    <RatingStars :rating="review.rating" />
+                                </div>
+
+                                <span v-if="review.publishedAt" class="text-xs text-muted-foreground">
+                                    {{ formatDate(review.publishedAt) }}
+                                </span>
+                            </div>
+
+                            <p
+                                v-if="review.comment"
+                                class="text-sm leading-relaxed whitespace-pre-line text-muted-foreground"
+                            >
+                                {{ review.comment }}
+                            </p>
+
+                            <p v-if="review.site" class="text-xs text-muted-foreground">
+                                Лот: {{ review.site.title }} · {{ review.site.domain }}
+                            </p>
+                        </Card>
+                    </div>
+
+                    <div
+                        v-if="Number(reviewsMeta.page ?? 1) < Number(reviewsMeta.lastPage ?? 1)"
+                        class="mt-3"
+                    >
+                        <Button variant="outline" size="sm" @click="showMoreReviews">
+                            Показать ещё отзывы
+                        </Button>
+                    </div>
+                </template>
             </section>
 
             <ContactSellerDialog v-model:open="isContactOpen" :listing="contactListing" />

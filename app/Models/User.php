@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ModerationStatus;
 use App\Enums\NotificationType;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -87,6 +88,8 @@ class User extends Authenticatable
         return [
             'password' => 'hashed',
             'notification_settings' => 'array',
+            'rating_avg' => 'decimal:2',
+            'reviews_count' => 'integer',
             'vk_last_login_at' => 'datetime',
             'ya_last_login_at' => 'datetime',
         ];
@@ -131,6 +134,45 @@ class User extends Authenticatable
     public function savedSearches(): HasMany
     {
         return $this->hasMany(SavedSearch::class);
+    }
+
+    /**
+     * Отзывы, полученные пользователем как продавцом.
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class, 'seller_id');
+    }
+
+    /**
+     * Отзывы, написанные пользователем как покупателем.
+     */
+    public function writtenReviews(): HasMany
+    {
+        return $this->hasMany(Review::class, 'author_id');
+    }
+
+    /**
+     * Пересчитать средний рейтинг и число отзывов продавца.
+     *
+     * Учитываются только опубликованные отзывы: отзывы на модерации и
+     * отклонённые не должны влиять на доверие к продавцу.
+     */
+    public function recalculateRating(): void
+    {
+        $stats = Review::query()
+            ->where('seller_id', $this->getKey())
+            ->where('moderation_status', ModerationStatus::Approved)
+            ->toBase()
+            ->selectRaw('COUNT(*) as reviews_count, AVG(rating) as rating_avg')
+            ->first();
+
+        $count = (int) ($stats->reviews_count ?? 0);
+
+        $this->forceFill([
+            'reviews_count' => $count,
+            'rating_avg' => $count > 0 ? round((float) $stats->rating_avg, 2) : null,
+        ])->saveQuietly();
     }
 
     /**

@@ -4,9 +4,14 @@ import { createMemoryHistory, createRouter } from 'vue-router';
 
 import SellerView from '@/views/SellerView.vue';
 import { fetchSeller } from '@/services/sellerService';
+import { fetchSellerReviews } from '@/services/reviewService';
 
 vi.mock('@/services/sellerService', () => ({
     fetchSeller: vi.fn(),
+}));
+
+vi.mock('@/services/reviewService', () => ({
+    fetchSellerReviews: vi.fn(),
 }));
 
 vi.mock('vue-sonner', () => ({
@@ -37,6 +42,8 @@ function sellerFixture(overrides = {}) {
         isVerifiedSeller: true,
         publishedSitesCount: 2,
         soldSitesCount: 3,
+        ratingAvg: 4.5,
+        reviewsCount: 2,
         profileUrl: '/seller/7',
         ...overrides,
     };
@@ -67,11 +74,31 @@ function listingFixture(overrides = {}) {
 }
 
 /**
+ * @param {object} [overrides]
+ * @returns {object}
+ */
+function reviewFixture(overrides = {}) {
+    return {
+        id: 3,
+        rating: 5,
+        comment: 'Быстрая сделка, продавец на связи.',
+        status: 'approved',
+        statusLabel: 'Одобрено',
+        isPublished: true,
+        createdAt: '2026-10-25T10:00:00Z',
+        publishedAt: '2026-10-26T10:00:00Z',
+        author: { id: 42, displayName: 'Пётр Покупатель', avatarUrl: null },
+        site: { id: 15, title: 'Магазин товаров для дома', domain: 'dom-shop.ru' },
+        ...overrides,
+    };
+}
+
+/**
  * @param {object} [payload]
  * @param {Error | null} [failure]
  * @returns {Promise<import('@vue/test-utils').VueWrapper>}
  */
-async function mountView(payload = {}, failure = null) {
+async function mountView(payload = {}, failure = null, reviewsPayload = null) {
     const pinia = createPinia();
     setActivePinia(pinia);
 
@@ -90,6 +117,13 @@ async function mountView(payload = {}, failure = null) {
             ...payload,
         });
     }
+
+    fetchSellerReviews.mockResolvedValue(
+        reviewsPayload ?? {
+            items: [],
+            meta: { page: 1, perPage: 10, total: 0, lastPage: 1, from: null, to: null },
+        },
+    );
 
     const wrapper = mount(SellerView, {
         global: { plugins: [pinia, router] },
@@ -136,6 +170,22 @@ describe('SellerView', () => {
         });
 
         expect(wrapper.text()).toContain('У продавца пока нет опубликованных лотов');
+    });
+
+    it('показывает рейтинг и опубликованные отзывы', async () => {
+        const wrapper = await mountView(
+            {},
+            null,
+            {
+                items: [reviewFixture()],
+                meta: { page: 1, perPage: 10, total: 1, lastPage: 1, from: 1, to: 1 },
+            },
+        );
+
+        expect(wrapper.text()).toContain('Рейтинг');
+        expect(wrapper.text()).toContain('Отзывы покупателей');
+        expect(wrapper.text()).toContain('Пётр Покупатель');
+        expect(wrapper.text()).toContain('Быстрая сделка, продавец на связи.');
     });
 
     it('гидрирует состояние из серверного HTML без запроса к API', async () => {

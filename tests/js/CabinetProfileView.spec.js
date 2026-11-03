@@ -20,6 +20,7 @@ vi.mock('vue-sonner', () => ({
 const ROUTES = [
     { path: '/', name: 'catalog', component: { template: '<div />' } },
     { path: '/cabinet/sites', name: 'cabinet-sites', component: { template: '<div />' } },
+    { path: '/cabinet/reviews', name: 'cabinet-reviews', component: { template: '<div />' } },
     { path: '/cabinet/messages', name: 'cabinet-messages', component: { template: '<div />' } },
     { path: '/cabinet/hidden', name: 'cabinet-hidden', component: { template: '<div />' } },
     { path: '/cabinet/favorites', name: 'cabinet-favorites', component: { template: '<div />' } },

@@ -22,6 +22,7 @@ abstract class OrchidTestCase extends TestCase
             'platform.systems.attachment' => true,
             'platform.marketplace.categories' => true,
             'platform.marketplace.sites' => true,
+            'platform.marketplace.reviews' => true,
             'platform.marketplace.conversations' => true,
             'platform.marketplace.messages' => true,
             'platform.marketplace.payments' => true,

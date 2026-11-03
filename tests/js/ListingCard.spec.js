@@ -138,6 +138,24 @@ describe('ListingCard', () => {
         expect(link.attributes('data-to')).toContain('/seller/7');
     });
 
+    it('показывает рейтинг продавца, если отзывы есть', () => {
+        const wrapper = mountCard(
+            createListing({
+                seller: {
+                    id: 7,
+                    displayName: 'Иван Петров',
+                    avatarUrl: null,
+                    ratingAvg: 4.5,
+                    reviewsCount: 2,
+                    profileUrl: '/seller/7',
+                },
+            }),
+        );
+
+        expect(wrapper.text()).toContain('4,5');
+        expect(wrapper.text()).toContain('(2)');
+    });
+
     it('не показывает блок продавца, если данных нет', () => {
         const wrapper = mountCard(createListing());
 

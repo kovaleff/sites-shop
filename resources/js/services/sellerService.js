@@ -12,6 +12,8 @@ import { fetchJson } from '@/services/http';
  * @property {boolean} isVerifiedSeller
  * @property {number} publishedSitesCount
  * @property {number} soldSitesCount
+ * @property {number | null} ratingAvg
+ * @property {number} reviewsCount
  * @property {string} profileUrl
  */
 

@@ -41,6 +41,8 @@ class PublicSiteResource extends JsonResource
                 'id' => $this->owner->id,
                 'displayName' => $this->owner->name,
                 'avatarUrl' => $this->owner->avatar,
+                'ratingAvg' => $this->owner->rating_avg === null ? null : (float) $this->owner->rating_avg,
+                'reviewsCount' => (int) ($this->owner->reviews_count ?? 0),
                 'profileUrl' => '/seller/'.$this->owner->id,
             ]),
             'publishedAt' => $this->created_at?->toIso8601String(),

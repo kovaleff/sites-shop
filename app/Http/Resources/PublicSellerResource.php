@@ -28,6 +28,8 @@ class PublicSellerResource extends JsonResource
             'isVerifiedSeller' => (int) ($this->verified_sites_count ?? 0) > 0,
             'publishedSitesCount' => (int) ($this->published_sites_count ?? 0),
             'soldSitesCount' => (int) ($this->sold_sites_count ?? 0),
+            'ratingAvg' => $this->rating_avg === null ? null : (float) $this->rating_avg,
+            'reviewsCount' => (int) ($this->reviews_count ?? 0),
             'profileUrl' => '/seller/'.$this->getKey(),
         ];
     }

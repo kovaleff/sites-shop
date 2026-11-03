@@ -107,6 +107,16 @@ class Site extends Model
             }
         });
 
+        static::deleting(function (Site $site): void {
+            // Удаление лота уносит и его отзывы: рейтинг продавца нужно пересчитать,
+            // иначе в профиле останется средняя оценка удалённых сделок.
+            if ($site->reviews()->exists()) {
+                $site->reviews()->delete();
+
+                User::query()->find($site->user_id)?->recalculateRating();
+            }
+        });
+
         static::deleted(function (): void {
             SitemapController::flush();
         });
@@ -214,6 +224,14 @@ class Site extends Model
     {
         return $this->belongsToMany(User::class, 'favorites')
             ->withTimestamps();
+    }
+
+    /**
+     * Отзывы покупателей по этому лоту.
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
     }
 
     #[Scope]

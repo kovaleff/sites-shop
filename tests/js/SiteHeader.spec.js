@@ -19,6 +19,7 @@ const ROUTES = [
     { path: '/how-it-works', name: 'how-it-works', component: { template: '<div />' }, meta: { navKey: 'how-it-works' } },
     { path: '/pricing', name: 'pricing', component: { template: '<div />' }, meta: { navKey: 'pricing' } },
     { path: '/cabinet/sites', name: 'cabinet-sites', component: { template: '<div />' } },
+    { path: '/cabinet/reviews', name: 'cabinet-reviews', component: { template: '<div />' } },
 ];
 
 /**

@@ -50,6 +50,11 @@ class PlatformProvider extends OrchidServiceProvider
                 ->route('platform.marketplace.moderation')
                 ->permission('platform.marketplace.sites'),
 
+            Menu::make('Отзывы')
+                ->icon('bs.star')
+                ->route('platform.marketplace.reviews')
+                ->permission('platform.marketplace.reviews'),
+
             Menu::make('Диалоги')
                 ->icon('bs.chat-dots')
                 ->route('platform.marketplace.conversations')
@@ -90,6 +95,7 @@ class PlatformProvider extends OrchidServiceProvider
             ItemPermission::group('Биржа')
                 ->addPermission('platform.marketplace.categories', 'Тематики')
                 ->addPermission('platform.marketplace.sites', 'Объявления')
+                ->addPermission('platform.marketplace.reviews', 'Отзывы')
                 ->addPermission('platform.marketplace.conversations', 'Диалоги')
                 ->addPermission('platform.marketplace.messages', 'Сообщения')
                 ->addPermission('platform.marketplace.payments', 'Платежи'),

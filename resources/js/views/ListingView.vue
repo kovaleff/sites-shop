@@ -8,6 +8,7 @@ import ContactSellerDialog from '@/components/catalog/ContactSellerDialog.vue';
 import FavoriteButton from '@/components/catalog/FavoriteButton.vue';
 import ReportListingDialog from '@/components/catalog/ReportListingDialog.vue';
 import SimilarListings from '@/components/catalog/SimilarListings.vue';
+import RatingStars from '@/components/reviews/RatingStars.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -325,6 +326,12 @@ watch(
                         >
                             Все лоты продавца
                         </RouterLink>
+
+                        <RatingStars
+                            v-if="Number(listing.seller.reviewsCount ?? 0) > 0"
+                            :rating="Number(listing.seller.ratingAvg ?? 0)"
+                            :count="listing.seller.reviewsCount"
+                        />
                     </Card>
 
                     <Card class="flex flex-col gap-3 border-border bg-card p-5">
