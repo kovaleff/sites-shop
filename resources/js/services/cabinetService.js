@@ -20,6 +20,12 @@ import { deleteJson, fetchJson, patchJson, postJson } from '@/services/http';
  * @property {boolean} verified
  * @property {string} verificationFilename
  * @property {number} unreadMessages
+ * @property {number} messagesCount
+ * @property {number} favoritesCount
+ * @property {number} viewsToday
+ * @property {number} viewsWeek
+ * @property {number} viewsMonth
+ * @property {number} viewsTotal
  */
 
 /**

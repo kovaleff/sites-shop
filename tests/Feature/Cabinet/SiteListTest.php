@@ -4,8 +4,10 @@ namespace Tests\Feature\Cabinet;
 
 use App\Models\Category;
 use App\Models\Conversation;
+use App\Models\Favorite;
 use App\Models\Message;
 use App\Models\Site;
+use App\Models\SiteView;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -104,6 +106,43 @@ class SiteListTest extends TestCase
 
         $this->assertSame(2, $items[$site->id]['unreadMessages']);
         $this->assertSame(0, $items[$otherSite->id]['unreadMessages']);
+    }
+
+    public function test_list_includes_views_favorites_and_messages_metrics(): void
+    {
+        $this->travelTo('2026-11-03 12:00:00');
+
+        $owner = User::factory()->create();
+        $site = Site::factory()->for($owner, 'owner')->create();
+
+        $views = [
+            ['date' => '2026-11-03', 'count' => 5],
+            ['date' => '2026-10-28', 'count' => 2],
+            ['date' => '2026-10-24', 'count' => 3],
+            ['date' => '2026-09-24', 'count' => 4],
+        ];
+
+        foreach ($views as $view) {
+            SiteView::factory()->create(['site_id' => $site->id] + $view);
+        }
+
+        Favorite::factory()->count(2)->create(['site_id' => $site->id]);
+
+        $buyer = User::factory()->create();
+        $conversation = Conversation::factory()->forSite($site, $buyer)->create();
+        Message::factory()->for($conversation)->count(2)->create();
+        Message::factory()->for($conversation)->read()->count(1)->create();
+
+        $response = $this->actingAs($owner)->getJson('/api/v1/my/sites');
+
+        $response->assertOk()
+            ->assertJsonPath('data.0.viewsToday', 5)
+            ->assertJsonPath('data.0.viewsWeek', 7)
+            ->assertJsonPath('data.0.viewsMonth', 10)
+            ->assertJsonPath('data.0.viewsTotal', 14)
+            ->assertJsonPath('data.0.favoritesCount', 2)
+            ->assertJsonPath('data.0.messagesCount', 3)
+            ->assertJsonPath('data.0.unreadMessages', 2);
     }
 
     public function test_categories_are_returned_with_site(): void

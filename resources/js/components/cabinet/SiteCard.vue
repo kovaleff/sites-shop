@@ -1,11 +1,11 @@
 <script setup>
 import { computed } from 'vue';
-import { RouterLink } from 'vue-router';
-import { MessageSquare, Pencil, Archive, ArchiveRestore } from '@lucide/vue';
+import { Pencil, Archive, ArchiveRestore } from '@lucide/vue';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import ModerationBadge from '@/components/cabinet/ModerationBadge.vue';
+import SiteMetrics from '@/components/cabinet/SiteMetrics.vue';
 import StatusBadge from '@/components/cabinet/StatusBadge.vue';
 import StatusMenu from '@/components/cabinet/StatusMenu.vue';
 import SubscriptionBlock from '@/components/cabinet/SubscriptionBlock.vue';
@@ -67,16 +67,9 @@ const needsModeration = computed(() => props.site.moderationStatus !== 'approved
         <div class="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span v-if="site.hasTrademark">Товарный знак есть</span>
             <span v-else>Без товарного знака</span>
-
-            <RouterLink
-                v-if="site.unreadMessages > 0"
-                :to="{ name: 'cabinet-messages' }"
-                class="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
-            >
-                <MessageSquare class="size-3.5" aria-hidden="true" />
-                Сообщения: {{ site.unreadMessages }}
-            </RouterLink>
         </div>
+
+        <SiteMetrics :site="site" />
 
         <SubscriptionBlock
             :paid-until="site.paidUntil"

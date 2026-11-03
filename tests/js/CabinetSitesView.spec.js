@@ -125,6 +125,12 @@ describe('CabinetSitesView', () => {
                         needsRenewal: true,
                         isPubliclyVisible: false,
                         unreadMessages: 2,
+                        messagesCount: 5,
+                        favoritesCount: 3,
+                        viewsToday: 3,
+                        viewsWeek: 12,
+                        viewsMonth: 34,
+                        viewsTotal: 88,
                         categories: [],
                     },
                 ],
@@ -137,7 +143,9 @@ describe('CabinetSitesView', () => {
         expect(wrapper.text()).toContain('Магазин товаров');
         expect(wrapper.text()).toContain('Требует продления');
         expect(wrapper.text()).toContain('Скрыто из каталога');
-        expect(wrapper.text()).toContain('Сообщения: 2');
+        expect(wrapper.text()).toContain('Сообщения: 5');
+        expect(wrapper.text()).toContain('В избранном: 3');
+        expect(wrapper.find('[title="Сегодня: 3 · Всего: 88"]').exists()).toBe(true);
     });
 
     it('показывает причину снятия объявления с публикации', async () => {

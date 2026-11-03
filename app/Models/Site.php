@@ -200,6 +200,14 @@ class Site extends Model
     }
 
     /**
+     * Дневные счётчики просмотров объявления.
+     */
+    public function views(): HasMany
+    {
+        return $this->hasMany(SiteView::class);
+    }
+
+    /**
      * Пользователи, добавившие лот в избранное.
      */
     public function favoriteUsers(): BelongsToMany

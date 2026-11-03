@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\PublicSiteResource;
 use App\Models\Site;
+use App\Services\Metrics\ListingViewRecorder;
 use App\Services\Seo\ListingImageGenerator;
 use App\Support\Seo\SeoMeta;
 use Illuminate\Database\Eloquent\Builder;
@@ -22,7 +23,10 @@ use Illuminate\View\View;
  */
 class ListingPageController extends Controller
 {
-    public function __construct(private readonly ListingImageGenerator $images) {}
+    public function __construct(
+        private readonly ListingImageGenerator $images,
+        private readonly ListingViewRecorder $views,
+    ) {}
 
     public function __invoke(Request $request, string $slug): View|RedirectResponse
     {
@@ -42,6 +46,8 @@ class ListingPageController extends Controller
         if ($slug !== $this->canonicalSlug($site)) {
             return redirect()->to($site->canonicalPath(), 301);
         }
+
+        $this->views->record($request, $site);
 
         $categories = $site->categories->pluck('name')->all();
         $imageUrl = $this->images->urlFor($site);

@@ -47,6 +47,12 @@ class SiteResource extends JsonResource
             'hiddenAt' => $this->hidden_at?->toIso8601String(),
             'categories' => CategoryResource::collection($this->whenLoaded('categories')),
             'unreadMessages' => (int) ($this->unread_messages_count ?? 0),
+            'messagesCount' => (int) ($this->messages_count ?? 0),
+            'favoritesCount' => (int) ($this->favorites_count ?? 0),
+            'viewsToday' => (int) ($this->views_today_sum ?? 0),
+            'viewsWeek' => (int) ($this->views_week_sum ?? 0),
+            'viewsMonth' => (int) ($this->views_month_sum ?? 0),
+            'viewsTotal' => (int) ($this->views_total_sum ?? 0),
             'createdAt' => $this->created_at?->toIso8601String(),
             'updatedAt' => $this->updated_at?->toIso8601String(),
             $this->mergeWhen($isDetail, fn (): array => [

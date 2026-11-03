@@ -11,6 +11,7 @@ use App\Http\Resources\SiteResource;
 use App\Jobs\VerifySiteDomain;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -25,12 +26,16 @@ class MySiteController extends Controller
         $user = $request->user();
         $onlyHidden = $request->boolean('hidden');
 
-        $sites = $user->sites()
+        $sites = $this->withMetrics($user->sites())
             ->with('categories')
-            ->withCount(['messages as unread_messages_count' => function (Builder $query) use ($user): void {
-                $query->where('sender_id', '!=', $user->id)
-                    ->whereNull('read_at');
-            }])
+            ->withCount([
+                'favorites as favorites_count',
+                'messages as messages_count',
+                'messages as unread_messages_count' => function (Builder $query) use ($user): void {
+                    $query->where('sender_id', '!=', $user->id)
+                        ->whereNull('read_at');
+                },
+            ])
             ->when($onlyHidden, fn (Builder $query) => $query->hiddenFromCabinet())
             ->when(! $onlyHidden, fn (Builder $query) => $query->visibleInCabinet())
             ->newestFirst()
@@ -67,8 +72,16 @@ class MySiteController extends Controller
      */
     public function show(Request $request, int $site): SiteResource
     {
-        $model = $request->user()->sites()
+        $model = $this->withMetrics($request->user()->sites())
             ->with(['categories', 'subscriptionPayments'])
+            ->withCount([
+                'favorites as favorites_count',
+                'messages as messages_count',
+                'messages as unread_messages_count' => function (Builder $query) use ($request): void {
+                    $query->where('sender_id', '!=', $request->user()->id)
+                        ->whereNull('read_at');
+                },
+            ])
             ->findOrFail($site);
 
         return new SiteResource($model);
@@ -102,6 +115,30 @@ class MySiteController extends Controller
         }
 
         return new SiteResource($model->load('categories'));
+    }
+
+    /**
+     * Агрегаты просмотров, избранного и сообщений для карточки кабинета.
+     *
+     * @param  HasMany<Site, User>  $query
+     * @return HasMany<Site, User>
+     */
+    private function withMetrics(HasMany $query): HasMany
+    {
+        return $query
+            ->withSum(
+                ['views as views_today_sum' => fn (Builder $views) => $views->where('date', today()->toDateString())],
+                'count',
+            )
+            ->withSum(
+                ['views as views_week_sum' => fn (Builder $views) => $views->where('date', '>=', today()->subDays(6)->toDateString())],
+                'count',
+            )
+            ->withSum(
+                ['views as views_month_sum' => fn (Builder $views) => $views->where('date', '>=', today()->subDays(29)->toDateString())],
+                'count',
+            )
+            ->withSum('views as views_total_sum', 'count');
     }
 
     /**
