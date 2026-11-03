@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 import { toast } from 'vue-sonner';
 import { ArrowLeft, BadgeCheck, Globe, TrendingUp } from '@lucide/vue';
@@ -7,6 +7,7 @@ import { ArrowLeft, BadgeCheck, Globe, TrendingUp } from '@lucide/vue';
 import ContactSellerDialog from '@/components/catalog/ContactSellerDialog.vue';
 import FavoriteButton from '@/components/catalog/FavoriteButton.vue';
 import ReportListingDialog from '@/components/catalog/ReportListingDialog.vue';
+import SimilarListings from '@/components/catalog/SimilarListings.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -14,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { consumeInitialState } from '@/lib/initialState';
 import { applyListingMeta } from '@/lib/pageMeta';
 import { formatDate, formatRub, formatRubMonthly } from '@/lib/format';
-import { fetchListing } from '@/services/catalogService';
+import { fetchListing, fetchSimilarListings } from '@/services/catalogService';
 import { useFavoritesStore } from '@/stores/favorites';
 import { useSessionStore } from '@/stores/session';
 
@@ -25,9 +26,12 @@ const session = useSessionStore();
 const listing = ref(null);
 const status = ref('loading');
 const error = ref('');
+const similar = ref([]);
+const similarStatus = ref('loading');
 const isContactOpen = ref(false);
 const isReportOpen = ref(false);
-const favoriteBusy = ref(false);
+const favoriteBusyId = ref(null);
+const similarFavoriteBusyId = ref(null);
 
 const isLoading = computed(() => status.value === 'loading');
 const isError = computed(() => status.value === 'error');
@@ -40,10 +44,14 @@ const isFavorite = computed(() =>
 );
 
 /**
+ * Переключение избранного для текущего или похожего лота.
+ *
+ * @param {number | null} siteId
+ * @param {import('vue').Ref<number | null>} busyId
  * @returns {Promise<void>}
  */
-async function toggleFavorite() {
-    if (!listing.value) {
+async function toggleFavorite(siteId, busyId) {
+    if (!siteId) {
         return;
     }
 
@@ -53,42 +61,108 @@ async function toggleFavorite() {
         return;
     }
 
-    favoriteBusy.value = true;
+    busyId.value = Number(siteId);
 
     try {
-        const added = await favorites.toggle(listing.value.id);
+        const added = await favorites.toggle(siteId);
 
         toast.success(added ? 'Лот добавлен в избранное' : 'Лот убран из избранного');
     } catch (requestError) {
         toast.error(requestError?.message ?? 'Не удалось обновить избранное');
     } finally {
-        favoriteBusy.value = false;
+        busyId.value = null;
     }
 }
 
 /**
- * Гидратация из серверного состояния: страница отрисована без запроса к API.
- * При переходе внутри SPA состояния нет — грузим по слагу.
+ * Переключение избранного для текущего лота.
  *
  * @returns {Promise<void>}
  */
-onMounted(async () => {
+function toggleMainFavorite() {
+    return toggleFavorite(listing.value?.id, favoriteBusyId);
+}
+
+/**
+ * Переключение избранного для похожего лота.
+ *
+ * @param {object} item
+ * @returns {Promise<void>}
+ */
+function toggleSimilarFavorite(item) {
+    return toggleFavorite(item?.id, similarFavoriteBusyId);
+}
+
+/**
+ * Похожие лоты грузятся отдельно: даже если блок не загрузился,
+ * сама карточка остаётся рабочей.
+ *
+ * @param {string} slug
+ * @returns {Promise<void>}
+ */
+async function loadSimilar(slug) {
+    similarStatus.value = 'loading';
+
+    try {
+        const items = await fetchSimilarListings(slug);
+
+        if (String(route.params.slug ?? '') !== slug) {
+            return;
+        }
+
+        similar.value = items;
+        similarStatus.value = 'ready';
+    } catch {
+        if (String(route.params.slug ?? '') === slug) {
+            similar.value = [];
+            similarStatus.value = 'error';
+        }
+    }
+}
+
+/**
+ * Загрузка лота: гидратация из серверного состояния либо запрос к API.
+ *
+ * @param {string} slug
+ * @returns {Promise<void>}
+ */
+async function load(slug) {
+    status.value = 'loading';
+    error.value = '';
+    listing.value = null;
+    similar.value = [];
+    similarStatus.value = 'loading';
+
     if (session.isAuthenticated) {
         favorites.ensureLoaded().catch(() => {});
     }
 
-    const slug = String(route.params.slug ?? '');
     const hydrated = consumeInitialState('listing');
 
-    if (hydrated && hydrated.slug === slug) { 
+    if (hydrated && hydrated.slug === slug) {
         listing.value = hydrated;
         status.value = 'ready';
+
+        const hydratedSimilar = consumeInitialState('similar');
+
+        if (Array.isArray(hydratedSimilar)) {
+            similar.value = hydratedSimilar;
+            similarStatus.value = 'ready';
+        } else {
+            loadSimilar(slug);
+        }
 
         return;
     }
 
+    loadSimilar(slug);
+
     try {
         const data = await fetchListing(slug);
+
+        if (String(route.params.slug ?? '') !== slug) {
+            return;
+        }
 
         if (!data) {
             status.value = 'error';
@@ -101,13 +175,29 @@ onMounted(async () => {
         status.value = 'ready';
         applyListingMeta(data);
     } catch (requestError) {
+        if (String(route.params.slug ?? '') !== slug) {
+            return;
+        }
+
         status.value = 'error';
         error.value =
             requestError?.status === 404
                 ? 'Объявление не найдено или снято с публикации.'
                 : (requestError?.message ?? 'Не удалось загрузить объявление.');
     }
-});
+}
+
+onMounted(() => load(String(route.params.slug ?? '')));
+
+// Переход по похожему лоту не пересоздаёт компонент — данные нужно перезагрузить.
+watch(
+    () => route.params.slug,
+    (slug) => {
+        if (slug) {
+            load(String(slug));
+        }
+    },
+);
 </script>
 
 <template>
@@ -171,8 +261,8 @@ onMounted(async () => {
                 <div class="flex flex-wrap items-center gap-2">
                     <FavoriteButton
                         :is-favorite="isFavorite"
-                        :busy="favoriteBusy"
-                        @toggle="toggleFavorite"
+                        :busy="favoriteBusyId === Number(listing.id)"
+                        @toggle="toggleMainFavorite"
                     />
                     <Button type="button" @click="isContactOpen = true">Связаться с продавцом</Button>
                     <Button type="button" variant="ghost" @click="isReportOpen = true">
@@ -274,6 +364,14 @@ onMounted(async () => {
                     </Card>
                 </div>
             </div>
+
+            <SimilarListings
+                :items="similar"
+                :loading="similarStatus === 'loading'"
+                :favorite-ids="favorites.ids"
+                :favorite-busy-id="similarFavoriteBusyId"
+                @favorite="toggleSimilarFavorite"
+            />
 
             <ContactSellerDialog v-model:open="isContactOpen" :listing="listing" />
             <ReportListingDialog v-model:open="isReportOpen" :listing="listing" />

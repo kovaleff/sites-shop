@@ -127,6 +127,9 @@ Route::prefix('api/v1')->group(function () {
     Route::get('/catalog', [CatalogController::class, 'index'])->name('api.v1.catalog');
     Route::get('/catalog/zones', [CatalogController::class, 'zones'])->name('api.v1.catalog.zones');
     Route::get('/categories', [CategoryController::class, 'index'])->name('api.v1.categories');
+    Route::get('/listings/{slug}/similar', [ListingController::class, 'similar'])
+        ->where('slug', '[0-9]+(-[A-Za-z0-9-]+)?')
+        ->name('api.v1.listings.similar');
     Route::get('/listings/{slug}', [ListingController::class, 'show'])
         ->where('slug', '[0-9]+(-[A-Za-z0-9-]+)?')
         ->name('api.v1.listings.show');

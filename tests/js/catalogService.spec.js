@@ -1,4 +1,4 @@
-import { fetchListings, fetchZones } from '@/services/catalogService';
+import { fetchListings, fetchSimilarListings, fetchZones } from '@/services/catalogService';
 
 /**
  * @param {object} payload
@@ -146,8 +146,7 @@ describe('catalogService.fetchListings', () => {
     });
 });
 
-describe('catalogService.fetchZones', () => {
-    afterEach(() => {
+describe('catalogService.fetchZones', () => {    afterEach(() => {
         vi.unstubAllGlobals();
     });
 
@@ -176,5 +175,32 @@ describe('catalogService.fetchZones', () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({})));
 
         await expect(fetchZones()).resolves.toEqual([]);
+    });
+});
+
+describe('catalogService.fetchSimilarListings', () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it('запрашивает похожие лоты по слагу', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(
+            jsonResponse({ items: [{ id: 2, title: 'Похожий лот' }] }),
+        );
+
+        vi.stubGlobal('fetch', fetchMock);
+
+        const items = await fetchSimilarListings('1-osnovnoi-lot');
+
+        expect(String(fetchMock.mock.calls[0][0])).toBe(
+            '/api/v1/listings/1-osnovnoi-lot/similar',
+        );
+        expect(items).toEqual([{ id: 2, title: 'Похожий лот' }]);
+    });
+
+    it('возвращает пустой список при неполном ответе', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({})));
+
+        await expect(fetchSimilarListings('1-lot')).resolves.toEqual([]);
     });
 });

@@ -74,6 +74,26 @@ class ListingPageTest extends TestCase
         $response->assertSee('Компьютеры и IT', false);
     }
 
+    public function test_listing_page_hydrates_similar_listings(): void
+    {
+        $category = Category::factory()->create();
+
+        $site = Site::factory()->paid()->create(['price' => 500_000]);
+        $site->categories()->attach($category);
+
+        $similar = Site::factory()->paid()->create([
+            'title' => 'Похожий лот для гидратации',
+            'price' => 540_000,
+        ]);
+        $similar->categories()->attach($category);
+
+        $response = $this->get($site->canonicalPath());
+
+        $response->assertOk();
+        $response->assertSee($similar->id.'-'.$similar->slug(), false);
+        $response->assertSee('Похожий лот для гидратации', false);
+    }
+
     public function test_outdated_slug_redirects_to_canonical_permanently(): void
     {
         $site = Site::factory()->paid()->create(['title' => 'Название']);

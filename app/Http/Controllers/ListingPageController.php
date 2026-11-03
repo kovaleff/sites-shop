@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\PublicSiteResource;
 use App\Models\Site;
+use App\Services\Catalog\SimilarListings;
 use App\Services\Metrics\ListingViewRecorder;
 use App\Services\Seo\ListingImageGenerator;
 use App\Support\Seo\SeoMeta;
@@ -26,6 +27,7 @@ class ListingPageController extends Controller
     public function __construct(
         private readonly ListingImageGenerator $images,
         private readonly ListingViewRecorder $views,
+        private readonly SimilarListings $similar,
     ) {}
 
     public function __invoke(Request $request, string $slug): View|RedirectResponse
@@ -56,6 +58,9 @@ class ListingPageController extends Controller
             'meta' => SeoMeta::forListing($site, $categories, $imageUrl)->toArray(),
             'initialState' => [
                 'listing' => (new PublicSiteResource($site))->resolve($request),
+                'similar' => PublicSiteResource::collection(
+                    $this->similar->forSite($site, $request->user()),
+                )->resolve($request),
             ],
         ]);
     }

@@ -106,3 +106,17 @@ export async function fetchListing(slug) {
 
     return data?.data ?? null;
 }
+
+/**
+ * Похожие лоты для карточки объявления: та же тематика и близкая цена.
+ *
+ * @param {string} slug
+ * @returns {Promise<object[]>}
+ */
+export async function fetchSimilarListings(slug) {
+    const data = await fetchJson(
+        `/api/v1/listings/${encodeURIComponent(slug)}/similar`,
+    );
+
+    return Array.isArray(data?.items) ? data.items : [];
+}
