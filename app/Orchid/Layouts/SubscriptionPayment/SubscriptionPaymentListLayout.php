@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Orchid\Layouts\SubscriptionPayment;
 
-use App\Enums\PaymentStatus;
 use App\Models\SubscriptionPayment;
 use Orchid\Screen\Actions\Link;
 use Orchid\Screen\Layouts\Table;
@@ -23,14 +22,23 @@ class SubscriptionPaymentListLayout extends Table
     public function columns(): array
     {
         return [
-            TD::make('id', 'ID')
+            TD::make('id', 'Счёт')
                 ->sort()
-                ->render(fn (SubscriptionPayment $payment) => Link::make((string) $payment->id)
+                ->render(fn (SubscriptionPayment $payment) => Link::make('№'.$payment->id)
                     ->route('platform.marketplace.payments.show', $payment)),
 
-            TD::make('site', 'Объявление')
+            TD::make('site_domain', 'Домен в счёте')
                 ->cantHide()
-                ->render(fn (SubscriptionPayment $payment) => $payment->site?->domain ?? '—'),
+                ->render(function (SubscriptionPayment $payment): string {
+                    $current = $payment->site?->domain;
+                    $snapshot = $payment->site_domain ?? $current ?? '—';
+
+                    if ($current !== null && $snapshot !== $current) {
+                        return $snapshot.' → '.$current;
+                    }
+
+                    return $snapshot;
+                }),
 
             TD::make('payer', 'Плательщик')
                 ->render(fn (SubscriptionPayment $payment) => $payment->payer?->name ?? '—'),
@@ -48,15 +56,22 @@ class SubscriptionPaymentListLayout extends Table
                 ->render(fn (SubscriptionPayment $payment) => $payment->period_months),
 
             TD::make('status', 'Статус')
-                ->filter(TD::FILTER_SELECT, collect(PaymentStatus::cases())
-                    ->mapWithKeys(fn (PaymentStatus $status) => [$status->value => $status->label()])
-                    ->all())
                 ->render(fn (SubscriptionPayment $payment) => $payment->status->label()),
+
+            TD::make('payment_method', 'Способ')
+                ->render(fn (SubscriptionPayment $payment) => $payment->payment_method?->label() ?? '—'),
+
+            TD::make('is_test', 'Тест')
+                ->alignCenter()
+                ->render(fn (SubscriptionPayment $payment) => $payment->is_test ? 'Тест' : ''),
+
+            TD::make('created_at', 'Создан')
+                ->sort()
+                ->render(fn (SubscriptionPayment $payment) => $payment->created_at?->format('d.m.Y H:i') ?? '—'),
 
             TD::make('paid_at', 'Оплачен')
                 ->sort()
                 ->alignRight()
-                ->filter(TD::FILTER_DATE_RANGE)
                 ->render(fn (SubscriptionPayment $payment) => $payment->paid_at?->format('d.m.Y H:i') ?? '—'),
         ];
     }

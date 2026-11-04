@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { Pencil, Archive, ArchiveRestore } from '@lucide/vue';
+import { Pencil, Archive, ArchiveRestore, CreditCard, History } from '@lucide/vue';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -17,11 +17,31 @@ const props = defineProps({
     mode: { type: String, default: 'visible' },
 });
 
-const emit = defineEmits(['edit', 'change', 'hide', 'restore']);
+const emit = defineEmits(['edit', 'change', 'hide', 'restore', 'pay', 'history']);
 
 const isSold = computed(() => props.site.status === 'sold');
 
 const needsModeration = computed(() => props.site.moderationStatus !== 'approved');
+
+const latestPayment = computed(() => props.site.latestPayment ?? null);
+
+const paymentAction = computed(() => {
+    if (isSold.value || !props.site.canRenew) {
+        return null;
+    }
+
+    switch (latestPayment.value?.status) {
+        case 'requires_review':
+            return { key: 'review', label: 'Платёж на проверке', variant: 'ghost' };
+        case 'pending':
+            return { key: 'continue', label: 'Продолжить оплату', variant: 'default' };
+        case 'failed':
+        case 'cancelled':
+            return { key: 'retry', label: 'Повторить оплату', variant: 'outline' };
+        default:
+            return { key: 'pay', label: 'Продлить', variant: 'default' };
+    }
+});
 </script>
 
 <template>
@@ -90,6 +110,28 @@ const needsModeration = computed(() => props.site.moderationStatus !== 'approved
                 >
                     <Pencil class="size-3.5" aria-hidden="true" />
                     Редактировать
+                </Button>
+
+                <Button
+                    v-if="paymentAction"
+                    type="button"
+                    :variant="paymentAction.variant"
+                    size="sm"
+                    @click="paymentAction.key === 'review' ? emit('history', site) : emit('pay', site)"
+                >
+                    <CreditCard class="size-3.5" aria-hidden="true" />
+                    {{ paymentAction.label }}
+                </Button>
+
+                <Button
+                    v-if="site.latestPayment"
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    @click="emit('history', site)"
+                >
+                    <History class="size-3.5" aria-hidden="true" />
+                    История
                 </Button>
 
                 <StatusMenu :status="site.status" @change="emit('change', $event)" />

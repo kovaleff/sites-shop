@@ -24,6 +24,7 @@ class AdminMenuTest extends OrchidTestCase
             'Диалоги' => 'platform.marketplace.conversations',
             'Сообщения' => 'platform.marketplace.messages',
             'Платежи' => 'platform.marketplace.payments',
+            'Настройки подписки' => 'platform.marketplace.subscription-settings',
         ];
     }
 
@@ -39,13 +40,13 @@ class AdminMenuTest extends OrchidTestCase
             ->values();
     }
 
-    public function test_marketplace_group_contains_exactly_eight_links_in_order(): void
+    public function test_marketplace_group_contains_exactly_nine_links_in_order(): void
     {
         $this->actingAs($this->admin());
 
         $items = self::marketplaceMenu();
 
-        $this->assertCount(8, $items);
+        $this->assertCount(9, $items);
         $this->assertSame(
             array_keys(self::marketplaceRoutes()),
             $items->map(fn (Menu $menu) => $menu->get('name'))->all(),
@@ -74,7 +75,7 @@ class AdminMenuTest extends OrchidTestCase
             ->all();
 
         $this->assertSame(
-            ['Пользователи', 'Тематики', 'Объявления', 'Модерация', 'Отзывы', 'Диалоги', 'Сообщения', 'Платежи', 'Roles'],
+            ['Пользователи', 'Тематики', 'Объявления', 'Модерация', 'Отзывы', 'Диалоги', 'Сообщения', 'Платежи', 'Настройки подписки', 'Roles'],
             $names,
         );
     }

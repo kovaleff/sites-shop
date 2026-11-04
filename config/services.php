@@ -48,4 +48,39 @@ return [
         'allowed_redirects' => env('YA_ALLOWED_REDIRECTS'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Robokassa (СБП QR)
+    |--------------------------------------------------------------------------
+    |
+    | Секреты используются только на сервере: подпись счёта считается
+    | Паролем #1, подпись callback проверяется Паролем #2. В браузер уходит
+    | лишь одноразовая подпись конкретного счёта.
+    |
+    */
+
+    'robokassa' => [
+        'merchant_login' => env('ROBOKASSA_MERCHANT_LOGIN'),
+        'password1' => env('ROBOKASSA_PASSWORD1'),
+        'password2' => env('ROBOKASSA_PASSWORD2'),
+
+        'test_merchant_login' => env('ROBOKASSA_TEST_MERCHANT_LOGIN'),
+        'test_password1' => env('ROBOKASSA_TEST_PASSWORD1'),
+        'test_password2' => env('ROBOKASSA_TEST_PASSWORD2'),
+        'test_mode' => (bool) env('ROBOKASSA_TEST_MODE', false),
+
+        'result_url' => env('ROBOKASSA_RESULT_URL', '/api/v1/payments/robokassa/result'),
+        'success_url' => env('ROBOKASSA_SUCCESS_URL', '/cabinet/sites?payment=success'),
+        'fail_url' => env('ROBOKASSA_FAIL_URL', '/cabinet/sites?payment=fail'),
+
+        'script_url' => env(
+            'ROBOKASSA_SCRIPT_URL',
+            'https://auth.robokassa.ru/merchant/bundle/robokassa-iframe-badge.js',
+        ),
+
+        'sno' => env('ROBOKASSA_SNO', 'osn'),
+        'tax' => env('ROBOKASSA_TAX', 'none'),
+        'payment_object' => env('ROBOKASSA_PAYMENT_OBJECT', 'service'),
+    ],
+
 ];

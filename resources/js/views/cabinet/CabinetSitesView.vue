@@ -1,15 +1,25 @@
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
 import { toast } from 'vue-sonner';
 import { Plus } from '@lucide/vue';
 
 import CabinetLayout from '@/components/cabinet/CabinetLayout.vue';
+import PaymentDialog from '@/components/cabinet/PaymentDialog.vue';
+import PaymentHistory from '@/components/cabinet/PaymentHistory.vue';
 import SiteCard from '@/components/cabinet/SiteCard.vue';
 import CatalogPagination from '@/components/catalog/CatalogPagination.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { fetchPaymentHistory } from '@/services/paymentService';
 import { useCabinetStore } from '@/stores/cabinet';
 
 const router = useRouter();
@@ -19,6 +29,15 @@ const { items, meta, status, error } = storeToRefs(cabinet);
 const isLoading = computed(() => status.value === 'loading' || status.value === 'idle');
 const isEmpty = computed(() => status.value === 'success' && items.value.length === 0);
 const hasError = computed(() => status.value === 'error');
+
+const paymentOpen = ref(false);
+const paymentSite = ref(null);
+
+const historyOpen = ref(false);
+const historySite = ref(null);
+const historyPayments = ref([]);
+const historyLoading = ref(false);
+const historyError = ref('');
 
 onMounted(() => {
     cabinet.load({ mode: 'visible', page: 1 });
@@ -57,6 +76,59 @@ async function hideSite(site) {
  */
 function editSite(site) {
     router.push({ name: 'cabinet-site-edit', params: { id: site.id } });
+}
+
+/**
+ * @param {object} site
+ * @returns {void}
+ */
+function openPayment(site) {
+    paymentSite.value = site;
+    paymentOpen.value = true;
+}
+
+/**
+ * @param {object} payment
+ * @returns {Promise<void>}
+ */
+async function onPaid(payment) {
+    toast.success('Оплата получена, подписка продлена');
+
+    if (paymentSite.value) {
+        await cabinet.refreshSite(paymentSite.value.id);
+    }
+}
+
+/**
+ * @param {object} site
+ * @returns {Promise<void>}
+ */
+async function openHistory(site) {
+    historySite.value = site;
+    historyPayments.value = [];
+    historyError.value = '';
+    historyOpen.value = true;
+    historyLoading.value = true;
+
+    try {
+        const payload = await fetchPaymentHistory(site.id);
+        historyPayments.value = payload?.data ?? [];
+    } catch (requestError) {
+        historyError.value = requestError?.message ?? 'Не удалось загрузить историю';
+    } finally {
+        historyLoading.value = false;
+    }
+}
+
+/**
+ * @returns {void}
+ */
+function continueFromHistory() {
+    historyOpen.value = false;
+
+    if (historySite.value) {
+        openPayment(historySite.value);
+    }
 }
 
 /**
@@ -122,6 +194,8 @@ function goToPage(page) {
                     @edit="editSite"
                     @change="changeStatus(site, $event)"
                     @hide="hideSite"
+                    @pay="openPayment"
+                    @history="openHistory"
                 />
 
                 <CatalogPagination
@@ -131,5 +205,28 @@ function goToPage(page) {
                 />
             </template>
         </div>
+
+        <PaymentDialog
+            v-model:open="paymentOpen"
+            :site="paymentSite"
+            @paid="onPaid"
+        />
+
+        <Dialog v-model:open="historyOpen">
+            <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>История платежей</DialogTitle>
+                    <DialogDescription v-if="historySite">{{ historySite.domain }}</DialogDescription>
+                </DialogHeader>
+
+                <PaymentHistory
+                    :payments="historyPayments"
+                    :loading="historyLoading"
+                    :error="historyError"
+                    @continue="continueFromHistory"
+                    @retry="continueFromHistory"
+                />
+            </DialogContent>
+        </Dialog>
     </CabinetLayout>
 </template>

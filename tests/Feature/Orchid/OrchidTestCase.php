@@ -26,6 +26,7 @@ abstract class OrchidTestCase extends TestCase
             'platform.marketplace.conversations' => true,
             'platform.marketplace.messages' => true,
             'platform.marketplace.payments' => true,
+            'platform.marketplace.subscription-settings' => true,
         ];
     }
 

@@ -68,7 +68,12 @@ class PlatformProvider extends OrchidServiceProvider
             Menu::make('Платежи')
                 ->icon('bs.credit-card')
                 ->route('platform.marketplace.payments')
-                ->permission('platform.marketplace.payments')
+                ->permission('platform.marketplace.payments'),
+
+            Menu::make('Настройки подписки')
+                ->icon('bs.cash-coin')
+                ->route('platform.marketplace.subscription-settings')
+                ->permission('platform.marketplace.subscription-settings')
                 ->divider(),
 
             Menu::make(__('Roles'))
@@ -98,7 +103,8 @@ class PlatformProvider extends OrchidServiceProvider
                 ->addPermission('platform.marketplace.reviews', 'Отзывы')
                 ->addPermission('platform.marketplace.conversations', 'Диалоги')
                 ->addPermission('platform.marketplace.messages', 'Сообщения')
-                ->addPermission('platform.marketplace.payments', 'Платежи'),
+                ->addPermission('platform.marketplace.payments', 'Платежи')
+                ->addPermission('platform.marketplace.subscription-settings', 'Настройки подписки'),
         ];
     }
 }

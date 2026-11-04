@@ -3,6 +3,7 @@ import { defineStore } from 'pinia';
 import {
     changeSiteStatus,
     fetchMySites,
+    fetchSite,
     hideSite,
     restoreSite,
 } from '@/services/cabinetService';
@@ -91,6 +92,25 @@ export const useCabinetStore = defineStore('cabinet', {
         async restore(id) {
             await restoreSite(id);
             this.items = this.items.filter((item) => item.id !== id);
+        },
+
+        /**
+         * @param {number} id
+         * @returns {Promise<object | null>}
+         */
+        async refreshSite(id) {
+            try {
+                const payload = await fetchSite(id);
+                const site = payload?.data ?? null;
+
+                if (site) {
+                    this.replace(site);
+                }
+
+                return site;
+            } catch {
+                return null;
+            }
         },
 
         /**

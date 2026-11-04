@@ -132,6 +132,51 @@ class SubscriptionPaymentReadOnlyTest extends OrchidTestCase
             ->assertSee('15.03.2027');
     }
 
+    public function test_legacy_payment_without_snapshot_still_shows_current_domain(): void
+    {
+        $this->actingAs($this->admin());
+
+        $site = Site::factory()->create(['domain' => 'legacy-payment.test']);
+
+        SubscriptionPayment::factory()->for($site)->create([
+            'site_domain' => null,
+            'base_price' => null,
+            'base_amount' => null,
+            'target_status' => null,
+            'receipt_email' => null,
+            'receipt_payload' => null,
+            'qr_expires_at' => null,
+            'provider' => null,
+            'payment_method' => null,
+        ]);
+
+        $this->get(route('platform.marketplace.payments'))
+            ->assertOk()
+            ->assertSee('legacy-payment.test');
+    }
+
+    public function test_payments_can_be_filtered_by_requires_review_status(): void
+    {
+        $this->actingAs($this->admin());
+
+        SubscriptionPayment::factory()
+            ->for(Site::factory()->create(['domain' => 'review-payment.test']))
+            ->requiresReview()
+            ->create();
+
+        SubscriptionPayment::factory()
+            ->for(Site::factory()->create(['domain' => 'paid-review-site.test']))
+            ->paid()
+            ->create();
+
+        $this->get(route('platform.marketplace.payments', [
+            'filter' => ['status' => [PaymentStatus::RequiresReview->value]],
+        ]))
+            ->assertOk()
+            ->assertSee('review-payment.test')
+            ->assertDontSee('paid-review-site.test');
+    }
+
     public function test_payment_screens_have_no_write_actions(): void
     {
         $this->actingAs($this->admin());

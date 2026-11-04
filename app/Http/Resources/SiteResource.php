@@ -42,14 +42,20 @@ class SiteResource extends JsonResource
             'unpublishReason' => $this->unpublish_reason,
             'paidUntil' => $this->paid_until?->toDateString(),
             'needsRenewal' => $this->needsRenewal(),
+            'canRenew' => $this->acceptsPayments(),
+            'latestPayment' => $this->whenLoaded(
+                'latestPayment',
+                fn () => $this->latestPayment === null
+                    ? null
+                    : (new SubscriptionPaymentSummaryResource($this->latestPayment))->resolve($request),
+            ),
             'isPubliclyVisible' => $this->isPubliclyVisible(),
             'soldAt' => $this->sold_at?->toIso8601String(),
             'hiddenAt' => $this->hidden_at?->toIso8601String(),
             'categories' => CategoryResource::collection($this->whenLoaded('categories')),
             'unreadMessages' => (int) ($this->unread_messages_count ?? 0),
             'messagesCount' => (int) ($this->messages_count ?? 0),
-            'favoritesCount' => (int) ($this->favorites_count ?? 0),
-            'viewsToday' => (int) ($this->views_today_sum ?? 0),
+            'favoritesCount' => (int) ($this->favorites_count ?? 0),            'viewsToday' => (int) ($this->views_today_sum ?? 0),
             'viewsWeek' => (int) ($this->views_week_sum ?? 0),
             'viewsMonth' => (int) ($this->views_month_sum ?? 0),
             'viewsTotal' => (int) ($this->views_total_sum ?? 0),

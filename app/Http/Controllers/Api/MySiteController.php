@@ -28,6 +28,7 @@ class MySiteController extends Controller
 
         $sites = $this->withMetrics($user->sites())
             ->with('categories')
+            ->with('latestPayment')
             ->withCount([
                 'favorites as favorites_count',
                 'messages as messages_count',
@@ -73,7 +74,7 @@ class MySiteController extends Controller
     public function show(Request $request, int $site): SiteResource
     {
         $model = $this->withMetrics($request->user()->sites())
-            ->with(['categories', 'subscriptionPayments'])
+            ->with(['categories', 'subscriptionPayments', 'latestPayment'])
             ->withCount([
                 'favorites as favorites_count',
                 'messages as messages_count',

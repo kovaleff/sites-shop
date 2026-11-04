@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Models;
 
+use App\Enums\ListingStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Site;
 use App\Models\SubscriptionPayment;
@@ -91,20 +92,72 @@ class SiteSubscriptionTest extends TestCase
         );
     }
 
-    public function test_withdrawn_and_sold_sites_reject_payment(): void
+    public function test_withdrawn_sites_accept_payment_and_move_to_target_status(): void
     {
-        foreach ([
-            Site::factory()->withdrawn()->create(),
-            Site::factory()->sold()->create(),
-        ] as $site) {
-            $payment = SubscriptionPayment::factory()->for($site)->create();
+        $site = Site::factory()->withdrawn()->create(['paid_until' => null]);
 
-            try {
-                $payment->markAsPaid();
-                $this->fail('A non-payable site must reject payment.');
-            } catch (DomainException) {
-                $this->assertSame(PaymentStatus::Pending, $payment->fresh()->status);
-            }
+        $payment = SubscriptionPayment::factory()->for($site)->create([
+            'target_status' => ListingStatus::Active->value,
+        ]);
+        $payment->markAsPaid();
+
+        $site->refresh();
+
+        $this->assertSame(PaymentStatus::Paid, $payment->fresh()->status);
+        $this->assertSame(ListingStatus::Active, $site->status);
+        $this->assertSame(today()->addMonthNoOverflow()->toDateString(), $site->paid_until->toDateString());
+    }
+
+    public function test_sold_sites_reject_payment(): void
+    {
+        $site = Site::factory()->sold()->create();
+
+        $payment = SubscriptionPayment::factory()->for($site)->create();
+
+        try {
+            $payment->markAsPaid();
+            $this->fail('A sold site must reject payment.');
+        } catch (DomainException) {
+            $this->assertSame(PaymentStatus::Pending, $payment->fresh()->status);
+        }
+    }
+
+    public function test_target_inactive_status_keeps_listing_hidden_but_extends_subscription(): void
+    {
+        $site = Site::factory()->withdrawn()->create(['paid_until' => null]);
+
+        $payment = SubscriptionPayment::factory()->for($site)->create([
+            'target_status' => ListingStatus::Inactive->value,
+        ]);
+        $payment->markAsPaid();
+
+        $site->refresh();
+
+        $this->assertSame(ListingStatus::Inactive, $site->status);
+        $this->assertNotNull($site->paid_until);
+        $this->assertFalse($site->isPubliclyVisible());
+    }
+
+    public function test_domain_conflict_blocks_applying_payment(): void
+    {
+        Site::factory()->create(['domain' => 'conflict-payment.test']);
+
+        $site = Site::factory()->withdrawn()->create([
+            'domain' => 'conflict-payment.test',
+            'paid_until' => null,
+        ]);
+
+        $payment = SubscriptionPayment::factory()->for($site)->create([
+            'target_status' => ListingStatus::Active->value,
+        ]);
+
+        $this->expectException(DomainException::class);
+
+        try {
+            $payment->markAsPaid();
+        } finally {
+            $this->assertSame(PaymentStatus::Pending, $payment->fresh()->status);
+            $this->assertNull($site->fresh()->paid_until);
         }
     }
 

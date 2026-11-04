@@ -26,6 +26,7 @@ use App\Orchid\Screens\Site\SiteEditScreen;
 use App\Orchid\Screens\Site\SiteListScreen;
 use App\Orchid\Screens\SubscriptionPayment\SubscriptionPaymentListScreen;
 use App\Orchid\Screens\SubscriptionPayment\SubscriptionPaymentShowScreen;
+use App\Orchid\Screens\SubscriptionSetting\SubscriptionSettingScreen;
 use App\Orchid\Screens\User\UserEditScreen;
 use App\Orchid\Screens\User\UserListScreen;
 use App\Orchid\Screens\User\UserProfileScreen;
@@ -190,6 +191,13 @@ Route::screen('marketplace/payments/{subscriptionPayment}', SubscriptionPaymentS
     ->breadcrumbs(fn (Trail $trail, $subscriptionPayment) => $trail
         ->parent('platform.marketplace.payments')
         ->push('Платёж #'.$subscriptionPayment->id, route('platform.marketplace.payments.show', $subscriptionPayment)));
+
+// Platform > Marketplace > Subscription settings
+Route::screen('marketplace/subscription-settings', SubscriptionSettingScreen::class)
+    ->name('platform.marketplace.subscription-settings')
+    ->breadcrumbs(fn (Trail $trail) => $trail
+        ->parent('platform.index')
+        ->push('Настройки подписки', route('platform.marketplace.subscription-settings')));
 
 // Example...
 Route::screen('example', ExampleScreen::class)

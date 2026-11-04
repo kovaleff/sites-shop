@@ -9,11 +9,15 @@ use App\Http\Controllers\Api\ListingController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\MySiteController;
 use App\Http\Controllers\Api\NotificationSettingsController;
+use App\Http\Controllers\Api\PaymentStatusController;
+use App\Http\Controllers\Api\PricingController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\RobokassaResultController;
 use App\Http\Controllers\Api\SavedSearchController;
 use App\Http\Controllers\Api\SellerController;
 use App\Http\Controllers\Api\SessionController;
+use App\Http\Controllers\Api\SitePaymentController;
 use App\Http\Controllers\Api\SiteReportController;
 use App\Http\Controllers\Api\SiteStatusController;
 use App\Http\Controllers\Api\SiteVisibilityController;
@@ -125,6 +129,13 @@ Route::post('/api/v1/auth/logout', [SessionController::class, 'logout'])->name('
 Route::prefix('api/v1')->group(function () {
     Route::get('/config', ConfigController::class)->name('api.v1.config');
 
+    Route::get('/pricing', PricingController::class)->name('api.v1.pricing');
+
+    // Серверное уведомление Robokassa: без сессии и CSRF, защита — подпись.
+    Route::post('/payments/robokassa/result', RobokassaResultController::class)
+        ->middleware('throttle:payment-callback')
+        ->name('api.v1.payments.robokassa.result');
+
     Route::get('/catalog', [CatalogController::class, 'index'])->name('api.v1.catalog');
     Route::get('/catalog/zones', [CatalogController::class, 'zones'])->name('api.v1.catalog.zones');
     Route::get('/categories', [CategoryController::class, 'index'])->name('api.v1.categories');
@@ -194,5 +205,26 @@ Route::prefix('api/v1')->group(function () {
         Route::post('/sites/{site}/reports', [SiteReportController::class, 'store'])
             ->middleware('throttle:5,1')
             ->name('api.v1.sites.reports.store');
+
+        // Оплата подписки через СБП (contracts/cabinet-payments-api.yaml).
+        Route::get('/my/sites/{site}/payment-options', [SitePaymentController::class, 'options'])
+            ->whereNumber('site')
+            ->middleware('throttle:payment-status')
+            ->name('api.v1.my-sites.payment-options');
+        Route::get('/my/sites/{site}/payments', [SitePaymentController::class, 'index'])
+            ->whereNumber('site')
+            ->name('api.v1.my-sites.payments.index');
+        Route::post('/my/sites/{site}/payments', [SitePaymentController::class, 'store'])
+            ->whereNumber('site')
+            ->middleware('throttle:create-payment')
+            ->name('api.v1.my-sites.payments.store');
+        Route::get('/my/payments/{payment}', [PaymentStatusController::class, 'show'])
+            ->whereNumber('payment')
+            ->middleware('throttle:payment-status')
+            ->name('api.v1.my-payments.show');
+        Route::post('/my/payments/{payment}/start', [SitePaymentController::class, 'start'])
+            ->whereNumber('payment')
+            ->middleware('throttle:payment-status')
+            ->name('api.v1.my-payments.start');
     });
 });

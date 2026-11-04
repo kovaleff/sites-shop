@@ -13,6 +13,9 @@ Artisan::command('inspire', function () {
 Schedule::command('sites:unpublish-expired')->dailyAt('00:10')->withoutOverlapping();
 Schedule::command('sites:notify-expiring')->dailyAt('09:00')->withoutOverlapping();
 
+// Истечение QR-кодов СБП: попытка становится «Отменён».
+Schedule::command('payments:expire-pending')->everyMinute()->withoutOverlapping();
+
 // Еженедельная перепроверка доменов опубликованных объявлений.
 Schedule::command('sites:recheck-domains')->weeklyOn(1, '03:00')->withoutOverlapping();
 

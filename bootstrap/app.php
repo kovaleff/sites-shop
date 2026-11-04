@@ -15,7 +15,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // VK ID возвращает код отправкой формы с чужого домена — CSRF-токена в запросе нет.
-        $middleware->preventRequestForgery(except: ['api/vk/callback']);
+        // ResultURL Robokassa — серверный callback без сессии и CSRF; подлинность
+        // проверяется подписью с Паролем #2.
+        $middleware->preventRequestForgery(except: [
+            'api/vk/callback',
+            'api/v1/payments/robokassa/result',
+        ]);
 
         // PKCE code_verifier фронтенд кладёт в cookie обычным JS (без шифрования Laravel),
         // иначе EncryptCookies выбросит его как нерасшифровываемый.

@@ -1,0 +1,594 @@
+openapi: 3.0.3
+info:
+  title: Sites-shop — оплата подписки через СБП Robokassa
+  version: 1.0.0
+  description: |
+    Контракт кабинетных эндпоинтов оплаты, публичной страницы «Тарифы» и
+    серверного уведомления Robokassa. Аутентификация кабинета — сессионная
+    cookie (Laravel session), CSRF — заголовок `X-CSRF-TOKEN`. ResultURL
+    вызывается Robokassa без сессии и CSRF; подлинность проверяется подписью.
+
+servers:
+  - url: /
+
+tags:
+  - name: Pricing
+  - name: Cabinet payments
+  - name: Provider callback
+
+paths:
+  /api/v1/pricing:
+    get:
+      tags: [Pricing]
+      summary: Публичные цена, сроки и скидки
+      description: Используется страницей «Тарифы» (FR-046). Значения те же, что в кабинете.
+      security: []
+      responses:
+        '200':
+          description: Актуальный тариф
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pricing'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/my/sites/{site}/payment-options:
+    get:
+      tags: [Cabinet payments]
+      summary: Данные для окна оплаты объявления
+      description: |
+        Возвращает цену, сроки, email по умолчанию, целевой статус и признак
+        скрытия, а также открытую попытку оплаты, если она есть (FR-002,
+        FR-002a, FR-014).
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SiteId'
+      responses:
+        '200':
+          description: Параметры оплаты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentOptions'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/my/sites/{site}/payments:
+    get:
+      tags: [Cabinet payments]
+      summary: История попыток оплаты объявления
+      description: Последние 50 попыток, от новых к старым (FR-031, FR-032).
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SiteId'
+      responses:
+        '200':
+          description: История платежей
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Cabinet payments]
+      summary: Выставить счёт на продление подписки
+      description: |
+        Проверяет владельца, статус объявления, тариф, email, отсутствие
+        открытой попытки и конфликт домена. Предыдущая `pending` попытка
+        отменяется. Условия фиксируются снимком (FR-003, FR-006–FR-010,
+        FR-001b, FR-005).
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SiteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+      responses:
+        '201':
+          description: Счёт создан; параметры для `Robokassa.pay.startOp`
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, robokassa]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Payment'
+                  robokassa:
+                    $ref: '#/components/schemas/RobokassaStart'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: |
+            Ошибка валидации или бизнес-правила: `sold`, `under_review`,
+            `tariff_inactive`, `domain_conflict`, `receipt_email_required`,
+            `invalid_period`, `invalid_amount`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/my/payments/{payment}:
+    get:
+      tags: [Cabinet payments]
+      summary: Статус попытки оплаты
+      description: |
+        Используется polling-ом в кабинете. Просроченная `pending` лениво
+        переводится в `cancelled` (FR-013, FR-033).
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      responses:
+        '200':
+          description: Текущее состояние платежа
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/my/payments/{payment}/start:
+    post:
+      tags: [Cabinet payments]
+      summary: Продолжить оплату по действующей попытке
+      description: |
+        Возвращает те же параметры `startOp`, если попытка `pending` и QR ещё
+        действует. Истёкшая попытка сначала переводится в `cancelled`, затем
+        возвращается 409 (FR-014).
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      responses:
+        '200':
+          description: Параметры для повторного открытия QR
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, robokassa]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Payment'
+                  robokassa:
+                    $ref: '#/components/schemas/RobokassaStart'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Попытка больше не может быть продолжена (`paid`, `failed`, `cancelled`, `requires_review`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/payments/robokassa/result:
+    post:
+      tags: [Provider callback]
+      summary: ResultURL Robokassa
+      description: |
+        Публичный callback. Проверяет подпись `md5(OutSum:InvId:Пароль#2)`,
+        сумму, валюту и способ оплаты. При успехе отвечает `OK{InvId}`.
+        Неверная подпись — 400. Неизвестный счёт, дубль и несовпадение
+        суммы — 200 `OK{InvId}` (с записью в лог/статус `requires_review`).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RobokassaCallback'
+      responses:
+        '200':
+          description: Уведомление принято
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: OK42
+        '400':
+          description: Неверная подпись или запрещённый тестовый callback
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ERROR
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: laravel_session
+
+  parameters:
+    SiteId:
+      name: site
+      in: path
+      required: true
+      description: Внутренний идентификатор объявления (не домен)
+      schema:
+        type: integer
+        minimum: 1
+    PaymentId:
+      name: payment
+      in: path
+      required: true
+      description: Номер счёта (`InvId`)
+      schema:
+        type: integer
+        minimum: 1
+
+  responses:
+    Unauthorized:
+      description: Требуется вход
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Объявление или платёж не найден (чужие записи не раскрываются)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: Слишком много запросов
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServerError:
+      description: Внутренняя ошибка
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Pricing:
+      type: object
+      required: [basePrice, isActive, periods]
+      properties:
+        basePrice:
+          type: number
+          format: float
+          example: 500.0
+          description: Базовая цена за один домен в месяц, рубли
+        isActive:
+          type: boolean
+          description: Разрешены ли новые счета
+        periods:
+          type: array
+          items:
+            $ref: '#/components/schemas/PricingPeriod'
+
+    PricingPeriod:
+      type: object
+      required: [months, discountPercent, total, perMonth]
+      properties:
+        months:
+          type: integer
+          minimum: 1
+          example: 3
+        discountPercent:
+          type: integer
+          minimum: 0
+          maximum: 99
+          example: 10
+        total:
+          type: integer
+          minimum: 1
+          example: 1350
+          description: Итоговая сумма в целых рублях
+        perMonth:
+          type: number
+          format: float
+          example: 450.0
+
+    PaymentOptions:
+      type: object
+      required:
+        - canPay
+        - basePrice
+        - periods
+        - targetStatus
+        - targetStatusLabel
+        - willBeHidden
+        - site
+      properties:
+        canPay:
+          type: boolean
+        blockedReason:
+          type: string
+          nullable: true
+          enum: [sold, under_review, tariff_inactive, domain_conflict, email_required, null]
+        blockedMessage:
+          type: string
+          nullable: true
+        basePrice:
+          type: number
+          format: float
+        periods:
+          type: array
+          items:
+            $ref: '#/components/schemas/PricingPeriod'
+        defaultReceiptEmail:
+          type: string
+          format: email
+          nullable: true
+        hasDeliverableEmail:
+          type: boolean
+        targetStatus:
+          type: string
+          enum: [active, inactive]
+        targetStatusLabel:
+          type: string
+          example: Активен
+        willBeHidden:
+          type: boolean
+          description: Объявление останется скрытым из каталога после оплаты
+        activePayment:
+          allOf:
+            - $ref: '#/components/schemas/PaymentSummary'
+          nullable: true
+        site:
+          type: object
+          required: [id, domain, status, statusLabel]
+          properties:
+            id:
+              type: integer
+            domain:
+              type: string
+            status:
+              type: string
+              enum: [active, inactive, withdrawn, sold]
+            statusLabel:
+              type: string
+
+    PaymentSummary:
+      type: object
+      required: [id, status, statusLabel, amount, periodMonths]
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+          enum: [pending, paid, failed, cancelled, requires_review]
+        statusLabel:
+          type: string
+        amount:
+          type: integer
+        periodMonths:
+          type: integer
+        qrExpiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewReason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    Payment:
+      type: object
+      required:
+        - id
+        - invoiceNumber
+        - siteId
+        - amount
+        - currency
+        - periodMonths
+        - status
+        - statusLabel
+        - createdAt
+      properties:
+        id:
+          type: integer
+        invoiceNumber:
+          type: integer
+          description: Номер счёта (`InvId`), совпадает с id
+        siteId:
+          type: integer
+        siteDomain:
+          type: string
+          nullable: true
+          description: Домен на момент выставления счёта
+        currentSiteDomain:
+          type: string
+          nullable: true
+          description: Текущий домен объявления
+        receiptEmail:
+          type: string
+          format: email
+          nullable: true
+        basePrice:
+          type: number
+          format: float
+          nullable: true
+        baseAmount:
+          type: number
+          format: float
+          nullable: true
+        discountPercent:
+          type: integer
+          minimum: 0
+          maximum: 99
+        discountAmount:
+          type: number
+          format: float
+        amount:
+          type: integer
+          minimum: 1
+          description: Итоговая сумма в целых рублях
+        currency:
+          type: string
+          example: RUB
+        periodMonths:
+          type: integer
+          minimum: 1
+        targetStatus:
+          type: string
+          enum: [active, inactive]
+          nullable: true
+        targetStatusLabel:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, paid, failed, cancelled, requires_review]
+        statusLabel:
+          type: string
+        paymentMethod:
+          type: string
+          enum: [sbp]
+          nullable: true
+        paymentMethodLabel:
+          type: string
+          nullable: true
+        provider:
+          type: string
+          nullable: true
+        isTest:
+          type: boolean
+        qrExpiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
+        failureReason:
+          type: string
+          nullable: true
+        reviewReason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    CreatePaymentRequest:
+      type: object
+      required: [periodMonths, receiptEmail]
+      properties:
+        periodMonths:
+          type: integer
+          minimum: 1
+          example: 3
+        receiptEmail:
+          type: string
+          format: email
+          maxLength: 255
+          example: seller@example.com
+
+    RobokassaStart:
+      type: object
+      required: [merchantLogin, outSum, invId, receipt, signature, isTest, scriptUrl]
+      properties:
+        merchantLogin:
+          type: string
+        outSum:
+          type: string
+          example: '1350'
+          description: Целое число рублей; та же строка используется в подписи
+        invId:
+          type: integer
+          example: 42
+        receipt:
+          type: string
+          description: JSON-строка фискального чека; передаётся в startOp без перекодирования
+        signature:
+          type: string
+          description: MD5-подпись запроса; не является секретом и привязана к счёту
+        isTest:
+          type: boolean
+        scriptUrl:
+          type: string
+          format: uri
+          example: https://auth.robokassa.ru/merchant/bundle/robokassa-iframe-badge.js
+
+    RobokassaCallback:
+      type: object
+      required: [OutSum, InvId, SignatureValue]
+      properties:
+        OutSum:
+          type: string
+          example: '1350.000000'
+        InvId:
+          type: string
+          example: '42'
+        SignatureValue:
+          type: string
+          example: 9f2c0d...
+        PaymentMethod:
+          type: string
+          example: SBP
+        EMail:
+          type: string
+          format: email
+        Fee:
+          type: string
+          example: '13.50'
+        IncCurrLabel:
+          type: string
+          example: RUB
+
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        error:
+          type: string
+          nullable: true
+          description: Машиночитаемый код бизнес-ошибки
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: Ошибки валидации по полям

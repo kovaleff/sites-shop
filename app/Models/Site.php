@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use Orchid\Filters\Filterable;
 use Orchid\Filters\Types\Like;
@@ -197,6 +198,14 @@ class Site extends Model
     public function subscriptionPayments(): HasMany
     {
         return $this->hasMany(SubscriptionPayment::class);
+    }
+
+    /**
+     * Последняя попытка оплаты — для действий карточки кабинета.
+     */
+    public function latestPayment(): HasOne
+    {
+        return $this->hasOne(SubscriptionPayment::class)->latestOfMany();
     }
 
     public function reports(): HasMany
@@ -435,7 +444,73 @@ class Site extends Model
 
     public function acceptsPayments(): bool
     {
-        return in_array($this->status, [ListingStatus::Active, ListingStatus::Inactive], true);
+        return in_array($this->status, [
+            ListingStatus::Active,
+            ListingStatus::Inactive,
+            ListingStatus::Withdrawn,
+        ], true);
+    }
+
+    /**
+     * Целевой статус после оплаты не должен нарушать уникальность домена
+     * среди активных и неактивных объявлений.
+     */
+    public function hasDomainConflictFor(ListingStatus $target): bool
+    {
+        if (! in_array($target, [ListingStatus::Active, ListingStatus::Inactive], true)) {
+            return false;
+        }
+
+        $domain = self::normalizeDomain($this->domain);
+
+        if ($domain === null || $domain === '') {
+            return false;
+        }
+
+        return self::query()
+            ->whereKeyNot($this->getKey())
+            ->where('domain', $domain)
+            ->whereIn('status', [ListingStatus::Active, ListingStatus::Inactive])
+            ->exists();
+    }
+
+    /**
+     * Применить успешную оплату: продлить подписку и перевести объявление
+     * в целевой статус, зафиксированный в счёте.
+     *
+     * @throws DomainException если оплата уже не может быть применена
+     */
+    public function applyPaidSubscription(int $months, ListingStatus $target): void
+    {
+        if ($months < 1) {
+            throw new DomainException('The subscription period must be at least one month.');
+        }
+
+        if (! in_array($target, [ListingStatus::Active, ListingStatus::Inactive], true)) {
+            throw new DomainException('The target status must be active or inactive.');
+        }
+
+        if (! $this->acceptsPayments()) {
+            throw new DomainException('The site does not accept payments in its current status.');
+        }
+
+        if ($this->hasDomainConflictFor($target)) {
+            throw new DomainException('The domain is already used by another active or inactive site.');
+        }
+
+        $base = $this->paid_until !== null && $this->paid_until->greaterThan(today())
+            ? $this->paid_until
+            : today();
+
+        $this->paid_until = CarbonImmutable::parse($base)->addMonthsNoOverflow($months);
+        $this->unpublish_reason = null;
+        $this->status = $target;
+
+        if ($target === ListingStatus::Sold) {
+            $this->sold_at = now();
+        }
+
+        $this->save();
     }
 
     public function changeStatus(ListingStatus $status): void

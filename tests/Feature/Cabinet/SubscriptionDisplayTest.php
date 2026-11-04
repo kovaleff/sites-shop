@@ -71,13 +71,59 @@ class SubscriptionDisplayTest extends TestCase
             ->assertJsonPath('data.0.needsRenewal', true);
     }
 
-    public function test_no_payment_endpoints_are_exposed(): void
+    public function test_list_exposes_latest_payment_and_renewal_ability(): void
+    {
+        $owner = User::factory()->create();
+        $site = Site::factory()->for($owner, 'owner')->create(['paid_until' => today()->addDays(30)]);
+
+        $latest = SubscriptionPayment::factory()->for($site)->create([
+            'user_id' => $owner->id,
+            'created_at' => now(),
+        ]);
+
+        $this->actingAs($owner)
+            ->getJson('/api/v1/my/sites')
+            ->assertOk()
+            ->assertJsonPath('data.0.canRenew', true)
+            ->assertJsonPath('data.0.latestPayment.id', $latest->id)
+            ->assertJsonPath('data.0.latestPayment.status', 'pending');
+    }
+
+    public function test_sold_site_cannot_be_renewed(): void
+    {
+        $owner = User::factory()->create();
+        Site::factory()->for($owner, 'owner')->sold()->create();
+
+        $this->actingAs($owner)
+            ->getJson('/api/v1/my/sites')
+            ->assertOk()
+            ->assertJsonPath('data.0.canRenew', false);
+    }
+
+    public function test_payment_history_endpoint_returns_attempts(): void
     {
         $owner = User::factory()->create();
         $site = Site::factory()->for($owner, 'owner')->create();
 
+        $payment = SubscriptionPayment::factory()->for($site)->paid()->create([
+            'user_id' => $owner->id,
+        ]);
+
         $this->actingAs($owner)
-            ->postJson("/api/v1/my/sites/{$site->id}/pay")
+            ->getJson("/api/v1/my/sites/{$site->id}/payments")
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $payment->id)
+            ->assertJsonPath('data.0.statusLabel', 'Оплачен');
+    }
+
+    public function test_foreign_site_payment_history_is_hidden(): void
+    {
+        $owner = User::factory()->create();
+        $stranger = User::factory()->create();
+        $site = Site::factory()->for($owner, 'owner')->create();
+
+        $this->actingAs($stranger)
+            ->getJson("/api/v1/my/sites/{$site->id}/payments")
             ->assertNotFound();
     }
 }
