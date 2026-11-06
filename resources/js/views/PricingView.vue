@@ -131,6 +131,12 @@ function monthsLabel(months) {
                     <RouterLink :to="{ name: 'catalog' }">Войти</RouterLink>
                 </Button>
             </div>
+
+            <p class="text-xs text-muted-foreground">
+                Оплата подписки означает акцепт
+                <a href="/offer" class="text-primary underline underline-offset-2">публичной оферты</a>.
+                Срок возврата и порядок оплаты описаны в оферте.
+            </p>
         </template>
     </section>
 </template>

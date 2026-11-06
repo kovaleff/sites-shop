@@ -397,6 +397,23 @@ function close() {
                     </div>
 
                     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+
+                    <p class="text-xs text-muted-foreground">
+                        Нажимая «Перейти к оплате», вы принимаете условия
+                        <a
+                            href="/offer"
+                            target="_blank"
+                            rel="noopener"
+                            class="text-primary underline underline-offset-2"
+                        >публичной оферты</a>
+                        и
+                        <a
+                            href="/privacy"
+                            target="_blank"
+                            rel="noopener"
+                            class="text-primary underline underline-offset-2"
+                        >политики конфиденциальности</a>.
+                    </p>
                 </template>
             </div>
 

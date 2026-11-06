@@ -25,6 +25,7 @@ class SiteManagementTest extends TestCase
             'monthlyRevenue' => 85000,
             'hasTrademark' => false,
             'categories' => [],
+            'acceptOffer' => true,
         ], $overrides);
     }
 

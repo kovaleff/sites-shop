@@ -38,6 +38,7 @@ class StoreSiteRequest extends FormRequest
             'hasTrademark' => ['sometimes', 'boolean'],
             'categories' => ['required', 'array', 'min:1'],
             'categories.*' => ['integer', 'exists:categories,id'],
+            'acceptOffer' => ['required', 'accepted'],
         ];
     }
 
@@ -89,6 +90,8 @@ class StoreSiteRequest extends FormRequest
             'monthlyRevenue.min' => 'Доход не может быть отрицательным.',
             'categories.required' => 'Выберите хотя бы одну тематику.',
             'categories.min' => 'Выберите хотя бы одну тематику.',
+            'acceptOffer.required' => 'Подтвердите принятие условий оферты и политики конфиденциальности.',
+            'acceptOffer.accepted' => 'Подтвердите принятие условий оферты и политики конфиденциальности.',
         ];
     }
 

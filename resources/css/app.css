@@ -103,3 +103,86 @@
         @apply bg-background text-foreground antialiased;
     }
 }
+
+@layer components {
+    .legal {
+        @apply mx-auto max-w-3xl text-[15px] leading-7 text-foreground sm:text-base;
+    }
+
+    .legal-head {
+        @apply mb-8 border-b border-border pb-6;
+    }
+
+    .legal-h1 {
+        @apply text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl;
+    }
+
+    .legal-subtitle {
+        @apply mt-3 text-base text-muted-foreground sm:text-lg;
+    }
+
+    .legal-edition {
+        @apply mt-2 text-sm text-muted-foreground;
+    }
+
+    .legal-toc {
+        @apply mb-10 rounded-xl border border-border bg-card/60 p-5;
+    }
+
+    .legal-toc__title {
+        @apply mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase;
+    }
+
+    .legal-toc__list {
+        @apply grid list-none grid-cols-1 gap-1.5 p-0 text-sm sm:grid-cols-2;
+    }
+
+    .legal-toc__link {
+        @apply text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline;
+    }
+
+    .legal-section {
+        @apply mt-10 scroll-mt-24;
+    }
+
+    .legal-h2 {
+        @apply mb-4 text-xl font-bold text-primary sm:text-2xl;
+    }
+
+    .legal-para {
+        @apply mt-3;
+    }
+
+    .legal-lead {
+        @apply mt-5 font-semibold text-foreground;
+    }
+
+    .legal-term {
+        @apply font-semibold text-foreground;
+    }
+
+    .legal-clause {
+        @apply mt-3 pl-12;
+        text-indent: -3rem;
+    }
+
+    .legal-clause__num {
+        @apply font-semibold text-foreground;
+    }
+
+    .legal-list {
+        @apply mt-2 list-disc space-y-1 pl-10;
+    }
+
+    .legal-requisite {
+        @apply mt-2;
+    }
+
+    .legal-requisite__label {
+        @apply font-semibold text-foreground;
+    }
+
+    .legal-link {
+        @apply text-primary underline underline-offset-4 transition-colors hover:text-primary/80;
+    }
+}

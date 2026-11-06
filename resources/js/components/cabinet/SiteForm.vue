@@ -32,6 +32,7 @@ const props = defineProps({
     submitting: { type: Boolean, default: false },
     submitLabel: { type: String, default: 'Сохранить' },
     captcha: { type: Object, default: null },
+    requireConsent: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['submit', 'cancel']);
@@ -41,12 +42,16 @@ const captchaToken = ref('');
 const form = reactive({
     ...props.initial,
     categories: [...(props.initial.categories ?? [])],
+    acceptOffer: false,
 });
 
 watch(
     () => props.initial,
     (value) => {
-        Object.assign(form, value, { categories: [...(value.categories ?? [])] });
+        Object.assign(form, value, {
+            categories: [...(value.categories ?? [])],
+            acceptOffer: false,
+        });
     },
     { deep: true },
 );
@@ -87,6 +92,7 @@ function submit() {
         monthlyRevenue: Number(form.monthlyRevenue),
         hasTrademark: Boolean(form.hasTrademark),
         categories: [...form.categories],
+        ...(props.requireConsent ? { acceptOffer: Boolean(form.acceptOffer) } : {}),
         ...(captchaToken.value ? { captchaToken: captchaToken.value } : {}),
     });
 }
@@ -214,8 +220,47 @@ function submit() {
             {{ errors.captchaToken[0] }}
         </p>
 
+        <div
+            v-if="requireConsent"
+            class="flex flex-col gap-1.5 rounded-lg border border-border p-3"
+        >
+            <div class="flex items-start gap-2.5">
+                <input
+                    id="site-consent"
+                    v-model="form.acceptOffer"
+                    type="checkbox"
+                    class="mt-0.5 size-4 shrink-0 accent-primary"
+                />
+                <label for="site-consent" class="text-sm text-muted-foreground">
+                    Принимаю условия
+                    <a
+                        href="/offer"
+                        target="_blank"
+                        rel="noopener"
+                        class="text-primary underline underline-offset-2"
+                        @click.stop
+                    >публичной оферты</a>
+                    и
+                    <a
+                        href="/privacy"
+                        target="_blank"
+                        rel="noopener"
+                        class="text-primary underline underline-offset-2"
+                        @click.stop
+                    >политики конфиденциальности</a>.
+                </label>
+            </div>
+
+            <p v-if="errorFor('acceptOffer')" class="text-xs text-destructive">
+                {{ errorFor('acceptOffer') }}
+            </p>
+        </div>
+
         <div class="flex flex-wrap gap-2">
-            <Button type="submit" :disabled="submitting">
+            <Button
+                type="submit"
+                :disabled="submitting || (requireConsent && !form.acceptOffer)"
+            >
                 {{ submitting ? 'Сохраняем…' : submitLabel }}
             </Button>
             <Button type="button" variant="ghost" @click="emit('cancel')">Отмена</Button>

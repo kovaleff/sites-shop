@@ -5,6 +5,7 @@ import { onMounted } from 'vue';
 import { toast } from 'vue-sonner';
 
 import { Toaster } from '@/components/ui/sonner';
+import SiteFooter from '@/components/layout/SiteFooter.vue';
 import SiteHeader from '@/components/layout/SiteHeader.vue';
 import { useAuth } from '@/composables/useAuth';
 
@@ -47,9 +48,12 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-background text-foreground">
+    <div class="flex min-h-screen flex-col bg-background text-foreground">
         <SiteHeader />
-        <RouterView />
+        <main class="flex-1">
+            <RouterView />
+        </main>
+        <SiteFooter />
         <Toaster theme="dark" position="top-center" :rich-colors="true" />
     </div>
 </template>

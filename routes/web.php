@@ -58,6 +58,28 @@ Route::get('/pricing', function () {
     ]);
 })->name('pricing');
 
+Route::get('/offer', function () {
+    return view('legal.offer', [
+        'meta' => SeoMeta::forPage(
+            'Публичная оферта',
+            'Условия оказания услуг Sites-shop: размещение объявления о продаже сайта, стоимость '
+                .'подписки, оплата через Робокассу и порядок возврата средств.',
+            '/offer',
+        )->toArray(),
+    ]);
+})->name('offer');
+
+Route::get('/privacy', function () {
+    return view('legal.privacy', [
+        'meta' => SeoMeta::forPage(
+            'Политика конфиденциальности',
+            'Какие персональные данные обрабатывает Sites-shop, с какой целью, кому они передаются '
+                .'и как пользователь может реализовать свои права.',
+            '/privacy',
+        )->toArray(),
+    ]);
+})->name('privacy');
+
 // Страница лота: серверный HTML с метатегами, Open Graph и JSON-LD.
 Route::get('/site/{slug}', ListingPageController::class)
     ->where('slug', '[0-9]+(-[A-Za-z0-9-]+)?')

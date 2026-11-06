@@ -27,6 +27,7 @@ class SiteCreationRulesTest extends TestCase
             'monthlyRevenue' => 85000,
             'hasTrademark' => false,
             'categories' => [],
+            'acceptOffer' => true,
         ], $overrides);
     }
 
@@ -51,6 +52,34 @@ class SiteCreationRulesTest extends TestCase
             'user_id' => $owner->id,
             'moderation_status' => ModerationStatus::Pending->value,
         ]);
+    }
+
+    public function test_offer_acceptance_is_required_to_create_site(): void
+    {
+        $owner = User::factory()->create();
+
+        $this->actingAs($owner)
+            ->postJson('/api/v1/my/sites', $this->payload([
+                'acceptOffer' => false,
+                'categories' => [$this->categoryId()],
+            ]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('acceptOffer');
+
+        $this->assertDatabaseCount('sites', 0);
+    }
+
+    public function test_offer_acceptance_is_not_required_to_update_site(): void
+    {
+        $owner = User::factory()->create();
+        $site = Site::factory()->for($owner, 'owner')->create();
+
+        $this->actingAs($owner)
+            ->patchJson("/api/v1/my/sites/{$site->id}", $this->payload([
+                'acceptOffer' => false,
+                'categories' => [$this->categoryId()],
+            ]))
+            ->assertOk();
     }
 
     public function test_links_in_title_are_rejected(): void

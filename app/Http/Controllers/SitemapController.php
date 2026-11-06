@@ -81,6 +81,8 @@ class SitemapController extends Controller
             ['loc' => url('/').'/', 'priority' => '1.0'],
             ['loc' => url('/how-it-works'), 'priority' => '0.5'],
             ['loc' => url('/pricing'), 'priority' => '0.6'],
+            ['loc' => url('/offer'), 'priority' => '0.4'],
+            ['loc' => url('/privacy'), 'priority' => '0.3'],
         ];
     }
 

@@ -32,6 +32,8 @@ class SitemapTest extends TestCase
         $this->assertStringContainsString('<urlset', $body);
         $this->assertStringContainsString(url('/'), $body);
         $this->assertStringContainsString(url('/pricing'), $body);
+        $this->assertStringContainsString(url('/offer'), $body);
+        $this->assertStringContainsString(url('/privacy'), $body);
         $this->assertStringContainsString(url($site->canonicalPath()), $body);
     }
 

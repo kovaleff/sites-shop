@@ -208,6 +208,7 @@ function cancel() {
                 :errors="errors"
                 :submitting="submitting"
                 :captcha="captcha"
+                :require-consent="!isEdit"
                 :submit-label="isEdit ? 'Сохранить изменения' : 'Сохранить объявление'"
                 @submit="submit"
                 @cancel="cancel"

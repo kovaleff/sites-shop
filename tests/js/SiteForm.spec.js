@@ -71,6 +71,30 @@ describe('SiteForm', () => {
         });
     });
 
+    it('требует согласия с офертой при создании объявления', async () => {
+        const wrapper = mount(SiteForm, {
+            props: {
+                initial: initial(),
+                categories: [{ id: 1, name: 'Компьютеры и IT' }],
+                requireConsent: true,
+            },
+        });
+
+        const submit = wrapper.find('button[type="submit"]');
+
+        expect(submit.attributes('disabled')).toBeDefined();
+        expect(wrapper.text()).toContain('публичной оферты');
+        expect(wrapper.text()).toContain('политики конфиденциальности');
+
+        await wrapper.find('#site-consent').setValue(true);
+
+        expect(submit.attributes('disabled')).toBeUndefined();
+
+        await wrapper.find('form').trigger('submit');
+
+        expect(wrapper.emitted('submit')[0][0]).toMatchObject({ acceptOffer: true });
+    });
+
     it('блокирует кнопку сохранения во время отправки', () => {
         const wrapper = mount(SiteForm, {
             props: { initial: initial(), categories: [], submitting: true },
