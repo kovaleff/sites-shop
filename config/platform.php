@@ -33,7 +33,7 @@ return [
      |
      */
 
-    'prefix' => env('PLATFORM_PREFIX', '/admin'),
+    'prefix' => env('PLATFORM_PREFIX', '/manage'),
 
     /*
      |--------------------------------------------------------------------------
