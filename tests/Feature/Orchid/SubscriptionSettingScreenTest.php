@@ -45,6 +45,17 @@ class SubscriptionSettingScreenTest extends OrchidTestCase
         $this->assertNull(Cache::get(SubscriptionSetting::CACHE_KEY));
     }
 
+    public function test_active_switch_submits_boolean_values(): void
+    {
+        $this->actingAs($this->admin());
+
+        $this->get(route('platform.marketplace.subscription-settings'))
+            ->assertOk()
+            // Скрытый input гарантирует, что выключенный переключатель
+            // отправит 0, а не отсутствующее значение.
+            ->assertSee('name="settings[is_active]" value="0"', false);
+    }
+
     public function test_periods_without_one_month_are_rejected(): void
     {
         $this->actingAs($this->admin());

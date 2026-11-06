@@ -273,6 +273,22 @@ class PaymentInvoiceTest extends TestCase
             ->assertJsonPath('blockedReason', 'sold');
     }
 
+    public function test_options_endpoint_reports_inactive_tariff_without_configured_price(): void
+    {
+        SubscriptionSetting::query()->delete();
+        Cache::forget(SubscriptionSetting::CACHE_KEY);
+
+        $user = User::factory()->create();
+        $site = Site::factory()->for($user, 'owner')->create();
+
+        $this->actingAs($user)->getJson(route('api.v1.my-sites.payment-options', $site))
+            ->assertOk()
+            ->assertJsonPath('canPay', false)
+            ->assertJsonPath('blockedReason', 'tariff_inactive')
+            ->assertJsonPath('basePrice', 0)
+            ->assertJsonPath('periods', []);
+    }
+
     public function test_history_endpoint_returns_payments_newest_first(): void
     {
         $user = User::factory()->create();

@@ -64,6 +64,9 @@ class SubscriptionPricing
     /**
      * Все доступные сроки с итоговыми суммами.
      *
+     * Если цена тарифа ещё не задана, список пуст: витрина и окно оплаты
+     * должны показать недоступность тарифа, а не ошибку расчёта.
+     *
      * @return array<int, array{
      *     months: int,
      *     basePrice: float,
@@ -77,6 +80,10 @@ class SubscriptionPricing
     public function periods(): array
     {
         $settings = $this->settings();
+
+        if (! $settings->hasConfiguredPrice()) {
+            return [];
+        }
 
         return collect($settings->normalizedPeriods())
             ->map(fn (int $months): array => $this->quote($months))

@@ -44,6 +44,18 @@ class PricingPageTest extends TestCase
             ->assertJsonPath('isActive', false);
     }
 
+    public function test_pricing_without_configured_price_returns_empty_periods(): void
+    {
+        SubscriptionSetting::query()->delete();
+        Cache::forget(SubscriptionSetting::CACHE_KEY);
+
+        $this->getJson(route('api.v1.pricing'))
+            ->assertOk()
+            ->assertJsonPath('isActive', false)
+            ->assertJsonPath('basePrice', 0)
+            ->assertJsonPath('periods', []);
+    }
+
     public function test_pricing_is_publicly_accessible_without_authentication(): void
     {
         $this->settings(basePrice: 700, isActive: true);

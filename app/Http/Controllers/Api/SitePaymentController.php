@@ -58,7 +58,7 @@ class SitePaymentController extends Controller
     /**
      * Выставление счёта на продление подписки (FR-003, FR-005–FR-010).
      */
-    public function store(StoreSubscriptionPaymentRequest $request, int $site): JsonResponse
+    public function  store(StoreSubscriptionPaymentRequest $request, int $site): JsonResponse
     {
         $model = $request->user()->sites()->findOrFail($site);
 

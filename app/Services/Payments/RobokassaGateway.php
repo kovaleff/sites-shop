@@ -76,7 +76,7 @@ class RobokassaGateway
      *
      * @return array{sno: string, items: array<int, array<string, mixed>>}
      */
-    public function receipt(SubscriptionPayment $payment, string $domain): array
+    public function  receipt(SubscriptionPayment $payment, string $domain): array
     {
         $months = (int) $payment->period_months;
 

@@ -131,6 +131,7 @@ class SubscriptionSettingScreen extends Screen
 
                 Switcher::make('settings.is_active')
                     ->title('Тариф активен')
+                    ->sendTrueOrFalse()
                     ->help('Выключенный тариф блокирует новые счета; уже выставленные счета остаются оплачиваемыми.'),
             ]),
         ];

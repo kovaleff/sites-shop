@@ -71,17 +71,53 @@ class SubscriptionSetting extends Model
     /**
      * Текущие настройки тарифа; при отсутствии строки возвращаются значения
      * по умолчанию (без создания записи).
+     *
+     * В кеш кладётся только массив атрибутов: кеширование Eloquent-модели
+     * ломается на сериализующих хранилищах (database, redis, file), так как
+     * Laravel по умолчанию не разрешает десериализацию классов и возвращает
+     * `__PHP_Incomplete_Class`.
      */
     public static function current(): self
     {
-        /** @var self $settings */
-        $settings = Cache::remember(
-            self::CACHE_KEY,
-            self::CACHE_TTL_SECONDS,
-            fn (): self => static::query()->find(1) ?? new self(static::defaults()),
-        );
+        $payload = Cache::get(self::CACHE_KEY);
 
-        return $settings;
+        if (! is_array($payload)) {
+            $payload = self::cachePayload();
+            Cache::put(self::CACHE_KEY, $payload, self::CACHE_TTL_SECONDS);
+        }
+
+        return self::fromCachePayload($payload);
+    }
+
+    /**
+     * @return array{exists: bool, attributes: array<string, mixed>}
+     */
+    private static function cachePayload(): array
+    {
+        $settings = static::query()->find(1);
+
+        return [
+            'exists' => $settings !== null,
+            'attributes' => $settings?->getAttributes() ?? static::defaults(),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private static function fromCachePayload(array $payload): self
+    {
+        $attributes = $payload['attributes'] ?? null;
+
+        if (! is_array($attributes)) {
+            $attributes = static::defaults();
+        }
+
+        if (! ($payload['exists'] ?? false)) {
+            return new self($attributes);
+        }
+
+        return (new self)->newFromBuilder($attributes);
     }
 
     /**
